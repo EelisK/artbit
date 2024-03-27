@@ -6,7 +6,8 @@ import numpy as np
 
 from enum import Enum
 from pika.adapters.blocking_connection import BlockingChannel as ControlChannel
-from shared import channel as rmq_channel
+from shared import schemas
+from shared.rmq import channel as rmq_channel
 
 logging.basicConfig(
     level=logging.INFO,
@@ -91,7 +92,7 @@ class HeartbeatPlayer:
         return pygame.sndarray.make_sound(data)
 
 
-class HeartbeatController:
+class HeartbeatConsumer:
     """
     A class that controls the playback of HeartbeatPlayers
     based on received heart rate data
@@ -112,21 +113,21 @@ class HeartbeatController:
         """
         for player in self.players:
             player.play()
-        self.__start_controller()
+        self.__start_consumer()
 
     def stop(self):
         """
         Stops the player and the control loop
         """
-        self.__stop_controller()
+        self.__stop_consumer()
         for player in self.players:
             player.stop()
 
-    def __start_controller(self):
+    def __start_consumer(self):
         for method_frame, _, body in self.control_channel.consume("heartbeats"):
             self.control_channel.basic_ack(method_frame.delivery_tag)
 
-            hearbeat_data = json.loads(body)
+            hearbeat_data: schemas.Heartbeat = json.loads(body)
             if hearbeat_data["is_error"]:
                 logging.warning(
                     "Error in heartbeat data: %s", json.dumps(hearbeat_data)
@@ -138,13 +139,13 @@ class HeartbeatController:
             for player in self.players:
                 player.set_bpm(heart_rate)
 
-    def __stop_controller(self):
+    def __stop_consumer(self):
         if not self.control_channel.is_closed:
             self.control_channel.cancel()
 
 
 def main():
-    controller = HeartbeatController(control_channel=rmq_channel)
+    controller = HeartbeatConsumer(control_channel=rmq_channel)
     player = HeartbeatPlayer()
     controller.add_player(player)
     try:
