@@ -21,7 +21,7 @@ export RMQ_PASSWORD="your-rmq-password"
 
 ```bash
 # Start the server
-(source .env && python server.py)
+(source .env && python -m server)
 # Start the client
-(source .env && python client.py)
+(source .env && python -m client)
 ```
