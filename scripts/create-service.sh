@@ -15,6 +15,7 @@ client | server)
     read -rp "Enter the RMQ port: " rmq_port
     read -rp "Enter the RMQ vhost: " rmq_vhost
     read -rp "Enter the RMQ username: " rmq_username
+    read -rp "Enter the RMQ password: " rmq_password
     ;;
 *)
     echo "Usage: $0 [client|server]"
@@ -35,6 +36,7 @@ Environment="RMQ_HOST=${rmq_host}"
 Environment="RMQ_PORT=${rmq_port}"
 Environment="RMQ_VHOST=${rmq_vhost}"
 Environment="RMQ_USERNAME=${rmq_username}"
+Environment="RMQ_PASSWORD=${rmq_password}"
 ExecStart=/usr/bin/python -m $(pwd)/${service_type}
 Restart=always
 RestartSec=5
@@ -48,5 +50,5 @@ echo "Creating ${service_type} service with the following configuration:"
 echo "$service_template"
 
 echo "$service_template" >"/etc/systemd/system/artbit-${service_type}.service"
-systemctl enable "${service_type}.service"
-systemctl start "${service_type}.service"
+systemctl enable "artbit-${service_type}.service"
+systemctl start "artbit-${service_type}.service"
