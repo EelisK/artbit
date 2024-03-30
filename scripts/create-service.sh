@@ -37,7 +37,8 @@ Environment="RMQ_PORT=${rmq_port}"
 Environment="RMQ_VHOST=${rmq_vhost}"
 Environment="RMQ_USERNAME=${rmq_username}"
 Environment="RMQ_PASSWORD=${rmq_password}"
-ExecStart=/usr/bin/python -m $(pwd)/${service_type}
+WorkingDirectory=$(pwd)
+ExecStart=/usr/bin/python -m ${service_type}
 Restart=always
 RestartSec=5
 User=pi
