@@ -26,7 +26,7 @@ esac
 service_template=$(
     cat <<EOF
 [Unit]
-Description=Heartbeat ${service_type} service
+Description=Artbit ${service_type}
 Wants=network-online.target
 After=network-online.target
 
@@ -47,6 +47,6 @@ EOF
 echo "Creating ${service_type} service with the following configuration:"
 echo "$service_template"
 
-echo "$service_template" >"/etc/systemd/system/${service_type}.service"
+echo "$service_template" >"/etc/systemd/system/artbit-${service_type}.service"
 systemctl enable "${service_type}.service"
 systemctl start "${service_type}.service"
