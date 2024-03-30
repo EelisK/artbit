@@ -17,7 +17,8 @@ def main():
     try:
         controller.start()
     except KeyboardInterrupt:
-        logging.info("Stopping player")
+        logging.info("Exiting...")
+    finally:
         controller.stop()
 
 
