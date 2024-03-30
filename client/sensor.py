@@ -34,6 +34,7 @@ class GroveFingerclipHeartSensor:
         if self.__bus is None:
             raise ValueError("Bus not opened")
         self.__read_time = datetime.now(timezone.utc)
+        self.__prev_sensor_value = self.__curr_sensor_value
         try:
             self.__curr_sensor_value = self.__bus.read_byte(self.address)
         except IOError:
