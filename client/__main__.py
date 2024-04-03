@@ -6,7 +6,7 @@ from shared.rmq import channel as rmq_channel
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(message)s",
+    format="(%(threadName)-9s) %(message)s",
 )
 
 
