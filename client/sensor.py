@@ -60,14 +60,13 @@ class GroveFingerclipHeartSensor:
         self.__prev_sensor_value = self.__curr_sensor_value
         try:
             self.__curr_sensor_value = self.__bus.read_byte(self.address)
+            if self.error_sensor is not None:
+                self.error_sensor.turn_off()
         except IOError:
             logging.error("Error reading from sensor")
             self.__curr_sensor_value = None
-        if self.error_sensor is not None:
-            if self.is_error:
+            if self.error_sensor is not None:
                 self.error_sensor.turn_on()
-            else:
-                self.error_sensor.turn_off()
 
     @property
     def sensor_value(self) -> Optional[int]:
