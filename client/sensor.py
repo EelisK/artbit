@@ -51,6 +51,7 @@ class GroveLed:
                 self.__toggle_on()
             else:
                 self.__toggle_off()
+            time.sleep(0.5)
 
     def set_blinking(self):
         self.__state = GroveLedState.BLINK
