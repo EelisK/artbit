@@ -33,6 +33,10 @@ class GroveFingerclipHeartSensor:
     connected to a Raspberry Pi
     """
 
+    # The minimum possible BPM value according
+    # to the guinness world records
+    MIN_POSSIBLE_BPM = 27
+
     def __init__(self, address: int, error_pin: Optional[int] = None) -> None:
         self.__prev_sensor_value: Optional[int] = None
         self.__curr_sensor_value: Optional[int] = None
@@ -74,7 +78,10 @@ class GroveFingerclipHeartSensor:
 
     @property
     def is_error(self) -> bool:
-        return self.__curr_sensor_value is None or self.__curr_sensor_value == 0
+        return (
+            self.__curr_sensor_value is None
+            or self.__curr_sensor_value <= self.MIN_POSSIBLE_BPM
+        )
 
     @property
     def has_changed(self) -> bool:
