@@ -11,7 +11,7 @@ logging.basicConfig(
 
 
 def main():
-    sensor = GroveFingerclipHeartSensor(address=0x50, error_pin=6)
+    sensor = GroveFingerclipHeartSensor(address=0x50, led_pin=6)
     producer = HeartbeatProducer(sensor, rmq_channel)
     try:
         producer.start()
