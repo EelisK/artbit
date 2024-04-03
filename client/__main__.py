@@ -19,7 +19,6 @@ def main():
         logging.info("Exiting...")
     finally:
         producer.stop()
-        del sensor
 
 
 if __name__ == "__main__":
