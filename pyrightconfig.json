@@ -1,0 +1,23 @@
+{
+  "include": ["**/*.py"],
+
+  "exclude": ["**/__pycache__", ".venv"],
+
+  "typeCheckingMode": "strict",
+
+  "defineConstant": {
+    "DEBUG": true
+  },
+
+  "reportMissingImports": "error",
+  "reportUnknownMemberType": false,
+
+  "pythonVersion": "3.9",
+  "pythonPlatform": "Linux",
+
+  "executionEnvironments": [
+    {
+      "root": "."
+    }
+  ]
+}
