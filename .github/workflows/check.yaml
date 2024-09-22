@@ -1,0 +1,26 @@
+---
+# yamllint disable rule:truthy
+
+name: Quality Checks
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-poetry
+      - name: Check formatting with ruff
+        run: ruff check
+      - name: Check imports with ruff
+        run: ruff check --select I
+      - name: Check types with pyright
+        run: pyright
