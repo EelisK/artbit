@@ -1,9 +1,9 @@
-import pygame
 import logging
 import threading
-import numpy as np
-
 from enum import Enum
+
+import numpy as np
+import pygame
 
 
 class PlayerState(Enum):
@@ -67,7 +67,7 @@ class HeartbeatPlayer:
         if self.__thread is not None:
             self.__thread.join()
 
-    def set_bpm(self, bpm):
+    def set_bpm(self, bpm: int):
         """
         Sets the BPM value for the heartbeat sound
         """

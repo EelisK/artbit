@@ -1,12 +1,12 @@
-from enum import Enum
-import time
 import logging
 import threading
-from typing import Optional
-import smbus2 as smbus
-import RPi.GPIO as GPIO
-
+import time
 from datetime import datetime, timezone
+from enum import Enum
+from typing import Optional
+
+import RPi.GPIO as GPIO  # type: ignore
+import smbus2 as smbus
 
 
 class GroveLedState(Enum):

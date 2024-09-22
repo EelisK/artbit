@@ -2,6 +2,7 @@ import json
 import logging
 
 from pika.adapters.blocking_connection import BlockingChannel as ControlChannel
+
 from server.player import HeartbeatPlayer
 from shared import schemas
 
@@ -18,7 +19,7 @@ class HeartbeatConsumer:
         self.control_channel = control_channel
         self.players = []
 
-    def add_player(self, player):
+    def add_player(self, player: HeartbeatPlayer):
         self.players.append(player)
 
     def start(self):
@@ -49,6 +50,12 @@ class HeartbeatConsumer:
                 continue
 
             heart_rate = hearbeat_data["pulse_value"]
+            if heart_rate is None:
+                logging.warning(
+                    "Received invalid heart rate data %s", json.dumps(hearbeat_data)
+                )
+                continue
+
             logging.info("Received heart rate %d", heart_rate)
             for player in self.players:
                 player.set_bpm(heart_rate)

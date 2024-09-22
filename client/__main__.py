@@ -1,8 +1,8 @@
 import logging
+
 from client.producer import HeartbeatProducer
 from client.sensor import GroveFingerclipHeartSensor
 from shared.rmq import channel as rmq_channel
-
 
 logging.basicConfig(
     level=logging.INFO,

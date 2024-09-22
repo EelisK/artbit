@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "artbit"
+package-mode = false
+version = "0.1.0"
+description = "Create art with heartbeats over the internet"
+authors = ["Eelis Kostiainen <eelis@kostiainen.dev>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+numpy = "1.26.4"
+pika = "1.3.2"
+pygame = "2.5.2"
+smbus2 = "0.4.3"
+
+
+[tool.poetry.group.dev.dependencies]
+pyright = "^1.1.381"
+ruff = "^0.6.7"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

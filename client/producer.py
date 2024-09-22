@@ -1,14 +1,13 @@
 import json
-import time
 import logging
+import time
 
 from pika.adapters.blocking_connection import BlockingChannel as ControlChannel
 from pika.exceptions import (
-    AMQPConnectionError,
     AMQPChannelError,
+    AMQPConnectionError,
     ConnectionClosedByBroker,
 )
-
 
 from client.sensor import GroveFingerclipHeartSensor
 from shared import schemas

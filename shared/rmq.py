@@ -1,4 +1,5 @@
 import os
+
 import pika
 
 _rmq_username = os.getenv("RMQ_USERNAME")
