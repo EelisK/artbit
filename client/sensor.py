@@ -79,15 +79,13 @@ class GroveFingerclipHeartSensor:
     # to the guinness world records
     MIN_POSSIBLE_BPM = 27
 
-    def __init__(self, address: int, led_pin: Optional[int] = None) -> None:
+    def __init__(self, address: int, led: Optional[GroveLed] = None) -> None:
         self.__prev_sensor_value: Optional[int] = None
         self.__curr_sensor_value: Optional[int] = None
         self.__read_time: Optional[datetime] = None
         self.__bus: Optional[smbus.SMBus] = None
         self.address = address
-        self.led = None
-        if led_pin is not None:
-            self.led = GroveLed(pin=led_pin)
+        self.led = led
 
     def open(self):
         if GPIO.RPI_REVISION in [2, 3]:

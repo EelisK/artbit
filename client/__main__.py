@@ -1,7 +1,7 @@
 import logging
 
 from client.producer import HeartbeatProducer
-from client.sensor import GroveFingerclipHeartSensor
+from client.sensor import GroveFingerclipHeartSensor, GroveLed
 from shared.rmq import channel as rmq_channel
 
 logging.basicConfig(
@@ -11,7 +11,7 @@ logging.basicConfig(
 
 
 def main():
-    sensor = GroveFingerclipHeartSensor(address=0x50, led_pin=6)
+    sensor = GroveFingerclipHeartSensor(address=0x50, led=GroveLed(pin=6))
     producer = HeartbeatProducer(sensor, rmq_channel)
     try:
         producer.start()
