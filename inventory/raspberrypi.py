@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 import json
 import logging
+import os
+import subprocess
 import sys
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -13,7 +15,7 @@ from scapy.sendrecv import srp
 logging.basicConfig(
     level=logging.INFO,
     stream=sys.stderr,
-    format="(%(threadName)-9s) %(message)s",
+    format="%(message)s",
 )
 
 
@@ -128,7 +130,24 @@ class VendorDeviceScanner(DeviceScanner):
         ]
 
 
+def ensure_root_privileges() -> bool:
+    if os.geteuid() != 0:
+        try:
+            # Use sudo to re-execute the script as root
+            logging.info("[sudo] password may be required.")
+            exit_code = subprocess.check_call(["sudo", sys.executable] + sys.argv)
+            # Exit the non-root version of the script after re-executing it
+            exit(exit_code)
+        except subprocess.CalledProcessError:
+            return False
+    return True
+
+
 if __name__ == "__main__":
+    if not ensure_root_privileges():
+        logging.critical("This script requires root privileges. Exiting.")
+        exit(1)
+
     iface = interfaces.get_working_if()
     if iface is None:
         logging.critical("No working interface found")
