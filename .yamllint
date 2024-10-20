@@ -8,6 +8,10 @@ extends: default
 # Rules documentation: http://yamllint.readthedocs.io/en/latest/rules.html
 rules:
 
+  octal-values:
+    forbid-implicit-octal: true
+    forbid-explicit-octal: true
+
   braces:
     # Defaults
     # min-spaces-inside: 0
@@ -36,6 +40,9 @@ rules:
 
     # Disabling to allow for code comment blocks and #!/usr/bin/ansible-playbook
     require-starting-space: false
+    min-spaces-from-content: 1
+
+  comments-indentation: false
 
   indentation:
     # Defaults
