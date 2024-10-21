@@ -1,0 +1,7 @@
+---
+- name: Initial setup for Raspberry Pi
+  hosts: raspberrypi
+  become: true
+  roles:
+    - python_poetry
+    - artbit_firmware

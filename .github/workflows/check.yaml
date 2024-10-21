@@ -12,12 +12,18 @@ on:
       - main
 
 jobs:
-  checks:
+  python:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
+      - name: Get python version
+        id: python-version
+        run: |
+          echo "value=$(cat .python-version)" >> $GITHUB_OUTPUT
       - uses: ./.github/actions/setup-poetry
+        with:
+          python-version: ${{ steps.python-version.outputs.value }}
       - name: Check formatting with ruff
         run: |
           source .venv/bin/activate
@@ -30,3 +36,20 @@ jobs:
         run: |
           source .venv/bin/activate
           pyright
+
+  ansible:
+    name: Ansible Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get python version
+        id: python-version
+        run: |
+          echo "value=$(cat .python-version)" >> $GITHUB_OUTPUT
+      - uses: ./.github/actions/setup-poetry
+        with:
+          python-version: ${{ steps.python-version.outputs.value }}
+      - name: Run ansible-lint
+        uses: ansible/ansible-lint@main
+        with:
+          setup_python: "false"
