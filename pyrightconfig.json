@@ -10,6 +10,7 @@
   },
 
   "reportMissingImports": "error",
+  "enableTypeIgnoreComments": false,
   "reportUnknownMemberType": false,
 
   "pythonVersion": "3.9",
