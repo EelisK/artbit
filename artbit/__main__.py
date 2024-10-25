@@ -4,8 +4,8 @@ import os
 
 from artbit.schemas import Heartbeat
 from artbit.sensors.grove_fingerclip import GroveFingerclipHeartSensor
-from artbit.sound.player import HeartbeatPlayer
-from artbit.sound.soundboard import Soundboard
+from artbit.sound.player import LoopPlayer
+from artbit.sound.presets import HeartbeatSound
 from artbit.stream.base import Stream
 from artbit.stream.sensor import SensorStream
 
@@ -36,14 +36,15 @@ sensor = GroveFingerclipHeartSensor(args.sensor_address)
 stream: Stream[Heartbeat] = SensorStream(sensor)
 
 # Create a player instance
-soundboard = Soundboard()
-player = HeartbeatPlayer(soundboard)
+player = LoopPlayer()
 
 try:
+    player.start()
     for beat in stream:
         if beat.pulse_value is None:
             continue
-        player.set_bpm(beat.pulse_value)
+        sound = HeartbeatSound(beat.pulse_value)
+        player.set_sound(sound)
 except (KeyboardInterrupt, OSError):
     logging.info("Stopping the application")
 finally:

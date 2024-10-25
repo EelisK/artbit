@@ -1,10 +1,9 @@
-import logging
 import threading
 from enum import Enum
+from typing import Optional
 
-import pygame
-
-from artbit.sound.soundboard import Soundboard
+from pygame.mixer import Sound
+from pygame.time import wait
 
 
 class PlayerState(Enum):
@@ -13,22 +12,18 @@ class PlayerState(Enum):
     STOPPING = "stopping"
 
 
-class HeartbeatPlayer:
+class LoopPlayer:
     """
-    A class that generates and plays a heartbeat sound
-    based on a given BPM value
+    Loop player repeats a sound indefinitely until it is stopped
     """
 
-    def __init__(self, soundboard: Soundboard):
-        self.__bpm = None
+    def __init__(self, sound: Optional[Sound] = None):
         self.__state = PlayerState.STOPPED
         self.__thread = None
-        self.__soundboard = soundboard
+        self.__sound = sound
 
-    def play(self):
-        self.__thread = threading.Thread(
-            name="heartbeat-player", target=self.start_player
-        )
+    def start(self):
+        self.__thread = threading.Thread(name="loop-player", target=self.start_player)
         self.__thread.start()
 
     def start_player(self):
@@ -36,18 +31,13 @@ class HeartbeatPlayer:
         Starts playing the generated heartbeat sound
         """
         self.__state = PlayerState.PLAYING
-        with self.__soundboard:
-            while self.__state == PlayerState.PLAYING:
-                if self.__bpm is None:
-                    logging.info("No BPM set, waiting for a value")
-                    pygame.time.wait(1000)
-                    continue
+        while self.__state == PlayerState.PLAYING:
+            if self.__sound is None:
+                wait(100)
+                continue
 
-                hearbeat_sound = self.__soundboard.heartbeat()
-                hearbeat_sound.play()
-
-                wait_time_ms = int(self.beat_interval_seconds * 1000)
-                pygame.time.wait(wait_time_ms)
+            self.__sound.play()
+            wait(int(self.__sound.get_length() * 1000))
 
         self.__state = PlayerState.STOPPED
 
@@ -62,11 +52,8 @@ class HeartbeatPlayer:
         if self.__thread is not None:
             self.__thread.join()
 
-    def set_bpm(self, bpm: int):
+    def set_sound(self, sound: Sound):
         """
-        Sets the BPM value for the heartbeat sound
+        Change the sound that is being looped
         """
-        self.__bpm = bpm
-        self.beat_interval_seconds = (
-            60.0 / self.__bpm - self.__soundboard.sound_duration
-        )
+        self.__sound = sound
