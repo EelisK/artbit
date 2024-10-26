@@ -1,5 +1,6 @@
 import numpy as np
 import pygame
+from numpy.typing import NDArray
 
 from artbit.sound.adapter import ChannelAdapter
 
@@ -18,28 +19,44 @@ class HeartbeatSound(ChannelAdapter):
 
         channel_framerate, channel_bit_depth, channel_count = init_params
 
-        sound_duration_seconds = (bpm / 60.0) ** -1
-        sound_sample_count = round(sound_duration_seconds * channel_framerate)
+        self.sound_duration = (bpm / 60.0) ** -1
+        self.sample_count = round(self.sound_duration * channel_framerate)
 
         x_axis = np.linspace(
-            -sound_duration_seconds / 2,
-            sound_duration_seconds / 2,
-            sound_sample_count,
+            -self.sound_duration / 2,
+            self.sound_duration / 2,
+            self.sample_count,
             dtype=np.float32,
             endpoint=False,
         )
         y_axis = np.sin(2 * np.pi * x_axis * self.HEARTBEAT_SOUND_FREQUENCY)
 
-        # Apply dirac delta to the soundwave to simulate a heartbeat
-        dirac_delta_limit = 0.09
-        dirac_delta = np.power(
-            np.e, -np.power((x_axis / sound_duration_seconds) / dirac_delta_limit, 2)
-        ) / (dirac_delta_limit * np.sqrt(np.pi))
-        smooth_dirac_delta = dirac_delta
+        delta = self.delta_laguerre()
 
-        y_axis = y_axis * smooth_dirac_delta
+        super().__init__(channel_bit_depth, channel_count, y_axis * delta)
 
-        super().__init__(channel_bit_depth, channel_count, y_axis)
+    def delta_laguerre(self) -> NDArray[np.float32]:
+        """
+        Generate a delta using the Laguerre polynomials
+        """
+        delta_limit = 0.09
+        laguerre_order = 10
+        x = np.linspace(-1, 1, self.sample_count, dtype=np.float32, endpoint=False)
+        return np.power(np.e, -np.power(x, 2) / delta_limit) * np.absolute(
+            (np.polynomial.laguerre.lagval(2 * x / delta_limit, [0, laguerre_order]))  # pyright: ignore[reportUnknownArgumentType]
+            / delta_limit
+        )
+
+    def delta_dirac(self) -> NDArray[np.float32]:
+        """
+        Generate a delta using the Dirac delta function
+        """
+        x = np.linspace(-1, 1, self.sample_count, dtype=np.float32, endpoint=False)
+        delta_limit = 0.09
+        delta = np.power(np.e, -np.power(x / self.sound_duration / delta_limit, 2)) / (
+            delta_limit * np.sqrt(np.pi)
+        )
+        return delta
 
 
 class ConstantFrequency(ChannelAdapter):
