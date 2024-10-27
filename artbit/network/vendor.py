@@ -23,6 +23,7 @@ class RaspberryPi(Vendor):
     @staticmethod
     def mac_prefixes() -> list[MACPrefix]:
         return [
+            MACPrefix(0x2C, 0xCF, 0x67),
             MACPrefix(0x28, 0xCD, 0xC1),
             MACPrefix(0xB8, 0x27, 0xEB),
             MACPrefix(0xD8, 0x3A, 0xDD),
