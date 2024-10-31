@@ -1,0 +1,55 @@
+#!/usr/bin/env python
+import json
+import logging
+import os
+import subprocess
+import sys
+from typing import Any
+
+from scapy import interfaces
+
+from artbit.network.scanner import LocalHostScanner, RaspberryPiScanner, Scanner
+
+logging.basicConfig(
+    level=logging.INFO,
+    stream=sys.stderr,
+    format="%(message)s",
+)
+
+if __name__ != "__main__":
+    raise RuntimeError("This module should be run as a script")
+
+iface = interfaces.get_working_if()
+if iface is None:
+    logging.critical("No working interface found")
+    exit(1)
+
+if iface.ip is None:
+    logging.critical("No IP address found")
+    exit(1)
+
+ip_range = ".".join(iface.ip.split(".")[0:3]) + ".0/24"
+
+scanners: dict[str, Scanner] = {
+    "raspberrypi": RaspberryPiScanner(ip_range),
+    "local": LocalHostScanner(),
+}
+
+output: dict[str, Any] = {"_meta": {}}
+
+
+if os.geteuid() != 0:
+    try:
+        # Use sudo to re-execute the script as root
+        logging.info("[sudo] password may be required.")
+        exit_code = subprocess.check_call(["sudo", sys.executable] + sys.argv)
+        # Exit the non-root version of the script after re-executing it
+        exit(exit_code)
+    except subprocess.CalledProcessError:
+        logging.critical("Failed to re-execute the script as root. Exiting.")
+        exit(1)
+
+for host, scanner in scanners.items():
+    output[host] = {"hosts": [x.ip for x in scanner.scan()]}
+
+print(json.dumps(output))

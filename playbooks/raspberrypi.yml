@@ -1,0 +1,7 @@
+---
+- name: Initial setup for Raspberry Pi
+  hosts: raspberrypi
+  become: true
+  roles:
+    - artbit_firmware
+    - artbit_core

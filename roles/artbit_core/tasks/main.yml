@@ -1,0 +1,4 @@
+---
+- name: "Install updater"
+  ansible.builtin.include_tasks: update.yml
+  when: artbit_core_update_enabled

@@ -1,0 +1,11 @@
+---
+- name: System setup run locally on the host
+  hosts: local
+  connection: local
+  become: true
+
+  tasks:
+    - name: Done
+      ansible.builtin.debug:
+        msg:
+          - "Local setup done"

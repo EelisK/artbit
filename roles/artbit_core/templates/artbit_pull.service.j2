@@ -1,0 +1,9 @@
+{{ ansible_managed|comment }}
+
+[Unit]
+Description=System configuration upgrade
+After=network-online.target
+
+[Service]
+ExecStart=/bin/sh -c 'ansible-pull --accept-host-key --clean --full --url "{{ artbit_core_repo_url }}" --inventory "{{ artbit_core_update_inventory }}" --checkout "{{ artbit_core_repo_branch }}" --directory "{{ artbit_core_path }}" "{{ artbit_core_update_playbook }}"'
+TimeoutStopSec=600
