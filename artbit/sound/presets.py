@@ -84,6 +84,25 @@ class ConstantFrequency(ChannelAdapter):
         super().__init__(channel_bit_depth, channel_count, y_axis)
 
 
+class Silence(ChannelAdapter):
+    """
+    Sound of silence for a given duration
+
+    """
+
+    def __init__(self, duration: float) -> None:
+        init_params = pygame.mixer.get_init()
+        if init_params is None:  # pyright: ignore[reportUnnecessaryComparison]
+            raise RuntimeError("Mixer is not initialized")
+
+        channel_framerate, channel_bit_depth, channel_count = init_params
+        super().__init__(
+            channel_bit_depth,
+            channel_count,
+            np.zeros(round(duration * channel_framerate)).astype(np.float32),
+        )
+
+
 class FlatlineSound(ConstantFrequency):
     """
     The sound of flatlining in an ECG monitor, just for fun

@@ -27,7 +27,13 @@ class ChannelAdapter(Sound):
         self.channel_bit_depth = channel_bit_depth
         self.channel_count = channel_count
         self.dtype = bit_depth_type_map[channel_bit_depth]
-        self.wave = self.normalize(wave)
+
+        # Normalize the soundwave if it is not empty
+        if np.all(wave == 0):
+            self.wave = wave
+        else:
+            self.wave = self.normalize(wave)
+
         # Extend the soundwave to the channel count
         data = np.zeros(
             (len(wave), channel_count),
