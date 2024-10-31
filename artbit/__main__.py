@@ -41,9 +41,7 @@ player = LoopPlayer()
 try:
     player.start()
     for beat in stream:
-        if beat.pulse_value is None:
-            continue
-        sound = HeartbeatSound(beat.pulse_value)
+        sound = HeartbeatSound(beat.bpm)
         player.set_sound(sound)
 except (KeyboardInterrupt, OSError):
     logging.info("Stopping the application")

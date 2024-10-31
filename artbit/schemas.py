@@ -1,9 +1,8 @@
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass
 class Heartbeat:
+    # TODO: add sender
     timestamp: str
-    pulse_value: Optional[int]
-    is_error: bool
+    bpm: int

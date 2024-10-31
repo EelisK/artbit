@@ -17,10 +17,9 @@ class SensorStream(Stream[Heartbeat]):
         self.sensor.open()
         while True:
             self.sensor.update()
-            if self.sensor.has_changed:
+            if self.sensor.has_changed and self.sensor.sensor_value:
                 message = Heartbeat(
                     timestamp=self.sensor.read_time.isoformat(),
-                    pulse_value=self.sensor.sensor_value,
-                    is_error=self.sensor.is_error,
+                    bpm=self.sensor.sensor_value,
                 )
                 yield message

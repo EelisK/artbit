@@ -8,7 +8,7 @@ from typing import Any
 
 from scapy import interfaces
 
-from artbit.network.scanner import RaspberryPiScanner, Scanner
+from artbit.network.scanner import LocalHostScanner, RaspberryPiScanner, Scanner
 
 logging.basicConfig(
     level=logging.INFO,
@@ -16,14 +16,26 @@ logging.basicConfig(
     format="%(message)s",
 )
 
-scanners: dict[str, type[Scanner]] = {
-    "raspberrypi": RaspberryPiScanner,
-}
-
-output: dict[str, Any] = {"_meta": {}, "local": {"hosts": ["127.0.0.1"]}}
-
 if __name__ != "__main__":
     raise RuntimeError("This module should be run as a script")
+
+iface = interfaces.get_working_if()
+if iface is None:
+    logging.critical("No working interface found")
+    exit(1)
+
+if iface.ip is None:
+    logging.critical("No IP address found")
+    exit(1)
+
+ip_range = ".".join(iface.ip.split(".")[0:3]) + ".0/24"
+
+scanners: dict[str, Scanner] = {
+    "raspberrypi": RaspberryPiScanner(ip_range),
+    "local": LocalHostScanner(),
+}
+
+output: dict[str, Any] = {"_meta": {}}
 
 
 if os.geteuid() != 0:
@@ -37,20 +49,7 @@ if os.geteuid() != 0:
         logging.critical("Failed to re-execute the script as root. Exiting.")
         exit(1)
 
-
-iface = interfaces.get_working_if()
-if iface is None:
-    logging.critical("No working interface found")
-    exit(1)
-
-if iface.ip is None:
-    logging.critical("No IP address found")
-    exit(1)
-
-ip_range = ".".join(iface.ip.split(".")[0:3]) + ".0/24"
-
-for host, scanner_cls in scanners.items():
-    scanner = scanner_cls(ip_range)
+for host, scanner in scanners.items():
     output[host] = {"hosts": [x.ip for x in scanner.scan()]}
 
 print(json.dumps(output))

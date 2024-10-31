@@ -1,5 +1,7 @@
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
+from scapy import interfaces
 from scapy.layers.l2 import ARP, Ether
 from scapy.packet import Packet
 from scapy.sendrecv import srp
@@ -23,7 +25,24 @@ class Response:
         return MACPrefix(first, second, third)
 
 
-class Scanner:
+class Scanner(ABC):
+    @abstractmethod
+    def scan(self) -> list[Response]: ...
+
+
+class LocalHostScanner(Scanner):
+    def scan(self) -> list[Response]:
+        iface = interfaces.get_working_if()
+        if iface is None:
+            raise RuntimeError("No working interface found")
+
+        if iface.mac is None:
+            raise RuntimeError("No MAC address found")
+
+        return [Response(ip="127.0.0.1", mac=iface.mac)]
+
+
+class ARPScanner(Scanner):
     """
     Scans a network for devices given an IP address range.
     """
@@ -50,7 +69,7 @@ class Scanner:
         return result
 
 
-class VendorScanner(Scanner):
+class VendorScanner(ARPScanner):
     """
     Scans a network for devices from a specific vendor.
     """
