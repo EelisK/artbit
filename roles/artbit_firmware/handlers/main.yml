@@ -1,3 +1,0 @@
----
-- name: Restart device
-  ansible.builtin.reboot:

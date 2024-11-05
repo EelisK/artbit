@@ -2,9 +2,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from typing import Generic, Iterator, TypeVar
 
-from _typeshed import DataclassInstance
-
-T = TypeVar("T", bound=DataclassInstance)
+T = TypeVar("T")
 
 
 class Stream(ABC, Iterable[T], Generic[T]):

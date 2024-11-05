@@ -1,11 +1,11 @@
 import argparse
+import dataclasses
+import json
 import logging
 import os
 
 from artbit.schemas import Heartbeat
 from artbit.sensors.grove_fingerclip import GroveFingerclipHeartSensor
-from artbit.sound.player import LoopPlayer
-from artbit.sound.presets import HeartbeatSound
 from artbit.stream.base import Stream
 from artbit.stream.sensor import SensorStream
 
@@ -34,16 +34,14 @@ args = parser.parse_args()
 # Create the stream
 sensor = GroveFingerclipHeartSensor(args.sensor_address)
 stream: Stream[Heartbeat] = SensorStream(sensor)
-
-# Create a player instance
-player = LoopPlayer()
+heartbeats: list[Heartbeat] = []
 
 try:
-    player.start()
     for beat in stream:
-        sound = HeartbeatSound(beat.bpm)
-        player.set_sound(sound)
+        logging.info(f"Received heartbeat: {beat}")
+        heartbeats.append(beat)
 except (KeyboardInterrupt, OSError):
     logging.info("Stopping the application")
 finally:
-    player.stop()
+    with open("heartbeat.json", "w") as f:
+        f.write(json.dumps([dataclasses.asdict(x) for x in heartbeats]))

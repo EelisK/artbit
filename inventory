@@ -32,10 +32,22 @@ ip_range = ".".join(iface.ip.split(".")[0:3]) + ".0/24"
 
 scanners: dict[str, Scanner] = {
     "raspberrypi": RaspberryPiScanner(ip_range),
-    "local": LocalHostScanner(),
+    "localhost": LocalHostScanner(),
 }
 
-output: dict[str, Any] = {"_meta": {}}
+output: dict[str, Any] = {
+    "_meta": {},
+    "localhost": {
+        "vars": {
+            "ansible_connection": "local",
+        },
+    },
+    "raspberrypi": {
+        "vars": {
+            "ansible_connection": "ssh",
+        }
+    },
+}
 
 
 if os.geteuid() != 0:
@@ -50,6 +62,6 @@ if os.geteuid() != 0:
         exit(1)
 
 for host, scanner in scanners.items():
-    output[host] = {"hosts": [x.ip for x in scanner.scan()]}
+    output[host]["hosts"] = [x.ip for x in scanner.scan()]
 
 print(json.dumps(output))

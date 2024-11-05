@@ -1,3 +1,4 @@
+import time
 from typing import Iterator
 
 from artbit.schemas import Heartbeat
@@ -16,6 +17,7 @@ class SensorStream(Stream[Heartbeat]):
     def __iter__(self) -> Iterator[Heartbeat]:
         self.sensor.open()
         while True:
+            time.sleep(0.5)
             self.sensor.update()
             if self.sensor.has_changed and self.sensor.sensor_value:
                 message = Heartbeat(

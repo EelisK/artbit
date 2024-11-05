@@ -1,0 +1,19 @@
+---
+- name: Fetch recorded data from Raspberry Pi
+  hosts: raspberrypi
+  become: false
+  tasks:
+    - name: Ensure data directory exists
+      ansible.builtin.file:
+        path: "{{ inventory_dir }}/data"
+        state: directory
+        mode: "0744"
+        owner: "{{ lookup('env', 'USER') }}"
+      delegate_to: localhost
+
+    - name: Fetch the recorded data
+      ansible.builtin.fetch:
+        src: /opt/artbit/heartbeat.json
+        dest: "{{ inventory_dir }}/data/{{ inventory_hostname }}.json"
+        flat: yes
+      failed_when: false

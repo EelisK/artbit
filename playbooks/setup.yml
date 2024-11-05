@@ -1,7 +1,63 @@
 ---
 - name: Initial setup for Raspberry Pi
   hosts: raspberrypi
+  gather_facts: false
   become: true
   roles:
-    - artbit_firmware
-    - artbit_core
+    - common
+  tasks:
+    - name: Make sure the artbit core directory exists
+      ansible.builtin.file:
+        path: /opt/artbit
+        state: directory
+        mode: "0755"
+
+    - name: Clear old contents of the artbit core directory
+      ansible.builtin.file:
+        path: /opt/artbit/*
+        state: absent
+
+    - name: Gather list of files in inventory_dir on local machine
+      ansible.builtin.find:
+        paths: "{{ inventory_dir }}"
+        recurse: yes
+        file_type: file
+      delegate_to: localhost
+      register: inventory_files
+
+    - name: Get list of files not ignored by git on local machine # noqa: command-instead-of-module risky-shell-pipe
+      ansible.builtin.shell:
+        executable: /bin/bash
+        cmd: |
+          git ls-files --cached --others --exclude-standard | \
+            while read l; do echo $(pwd)/$l ; done
+        chdir: "{{ inventory_dir }}"
+      delegate_to: localhost
+      register: files_output
+      changed_when: false
+
+    - name: Compress files
+      community.general.archive:
+        path: "{{ files_output.stdout_lines }}"
+        dest: "artbit-core.tar.gz"
+        format: gz
+        mode: "0755"
+      delegate_to: localhost
+
+    - name: Copy the compressed files to the Raspberry Pi
+      ansible.builtin.copy:
+        src: "artbit-core.tar.gz"
+        dest: /tmp/artbit-core.tar.gz
+        mode: "0755"
+
+    - name: Extract the compressed files
+      ansible.builtin.unarchive:
+        src: /tmp/artbit-core.tar.gz
+        dest: /opt/artbit
+        remote_src: yes
+
+    - name: Remove the compressed files
+      ansible.builtin.file:
+        path: "artbit-core.tar.gz"
+        state: absent
+      delegate_to: localhost

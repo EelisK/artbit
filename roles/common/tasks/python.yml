@@ -9,8 +9,3 @@
     name: pipx
     state: present
     break_system_packages: true
-
-- name: python | Install poetry
-  community.general.pipx:
-    name: poetry
-    state: present

@@ -56,7 +56,7 @@ class ARPScanner(Scanner):
         broadcast_ether_arp_req_frame = broadcast_ether_frame / arp_req_frame  # pyright: ignore[reportUnknownVariableType]
         snd_rcv_list, _ = srp(
             broadcast_ether_arp_req_frame,  # pyright: ignore[reportUnknownArgumentType]
-            timeout=1,
+            timeout=5,
             verbose=False,
         )
 
