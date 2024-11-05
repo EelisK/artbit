@@ -8,7 +8,7 @@ inputs:
   python-version:
     description: "The version of Python to use."
     required: false
-    default: "3.9"
+    default: "3.11"
   poetry-version:
     description: "The version of Poetry to use."
     required: false
