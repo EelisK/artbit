@@ -1,0 +1,10 @@
+---
+- name: apt-get update
+  become: true
+  ansible.builtin.apt:
+    update_cache: yes
+
+- name: apt-get upgrade
+  become: true
+  ansible.builtin.apt:
+    upgrade: yes

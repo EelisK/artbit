@@ -2,15 +2,17 @@
 - name: Initial setup for Raspberry Pi
   hosts: raspberrypi
   gather_facts: false
-  become: true
+  become: false
   roles:
     - common
   tasks:
     - name: Make sure the artbit core directory exists
+      become: true
       ansible.builtin.file:
         path: /opt/artbit
         state: directory
         mode: "0755"
+        owner: "{{ ansible_user }}"
 
     - name: Clear old contents of the artbit core directory
       ansible.builtin.file:
@@ -50,14 +52,34 @@
         dest: /tmp/artbit-core.tar.gz
         mode: "0755"
 
+    - name: Remove the compressed file
+      delegate_to: localhost
+      ansible.builtin.file:
+        path: "artbit-core.tar.gz"
+        state: absent
+
     - name: Extract the compressed files
       ansible.builtin.unarchive:
         src: /tmp/artbit-core.tar.gz
         dest: /opt/artbit
         remote_src: yes
 
-    - name: Remove the compressed files
+    - name: Remove the compressed file from the Raspberry Pi
       ansible.builtin.file:
-        path: "artbit-core.tar.gz"
+        path: /tmp/artbit-core.tar.gz
         state: absent
-      delegate_to: localhost
+
+    - name: Install poetry
+      community.general.pipx:
+        name: poetry
+        state: present
+
+    - name: Install dependencies
+      ansible.builtin.shell:
+        cmd: |
+          ~/.local/bin/poetry shell
+          ~/.local/bin/poetry install --no-interaction --no-ansi --all-extras
+        chdir: /opt/artbit
+        executable: /bin/bash
+      register: poetry_install_output
+      changed_when: '"No dependencies to install" not in poetry_install_output.stdout'

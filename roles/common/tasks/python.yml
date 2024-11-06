@@ -1,8 +1,56 @@
 ---
-- name: python | Install pip
-  ansible.builtin.apt:
-    name: python3-pip
+- name: python | Setup apt source repository
+  become: true
+  register: apt_repo
+  ansible.builtin.apt_repository:
+    repo: "{{ item }}"
     state: present
+  with_items:
+    - deb-src http://deb.debian.org/debian-security/ bookworm-security main contrib non-free non-free-firmware
+    - deb-src http://deb.debian.org/debian bookworm-updates main contrib non-free non-free-firmware
+    - deb-src http://deb.debian.org/debian bookworm main contrib non-free non-free-firmware
+  notify:
+    - apt-get update
+    - apt-get upgrade
+
+- name: python | Flush handlers
+  ansible.builtin.meta: flush_handlers
+
+- name: python | Install dependencies
+  become: true
+  ansible.builtin.apt:
+    name: "{{ item.packages }}"
+    state: "{{ item.state }}"
+  with_items:
+    - state: present
+      packages:
+        # Optional
+        - build-essential
+        - gdb
+        - lcov
+        - pkg-config
+        - libbz2-dev
+        - libffi-dev
+        - libgdbm-dev
+        - libgdbm-compat-dev
+        - liblzma-dev
+        - libncurses5-dev
+        - libreadline6-dev
+        - libsqlite3-dev
+        - libssl-dev
+        - lzma
+        - lzma-dev
+        - tk-dev
+        - uuid-dev
+        - zlib1g-dev
+          # Python dependencies
+        - python3-pip
+        # Regex
+        - libonig-dev
+    - state: build-dep
+      packages:
+        # Build dependencies
+        - python3
 
 - name: python | Install pipx
   ansible.builtin.pip:
