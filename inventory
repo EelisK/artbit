@@ -1,67 +1,50 @@
-#!/usr/bin/env python
-import json
-import logging
-import os
-import subprocess
-import sys
-from typing import Any
+#!/bin/bash
 
-from scapy import interfaces
+if ! command -v arp-scan &>/dev/null; then
+    echo "arp-scan could not be found"
+    exit
+fi
 
-from artbit.network.scanner import LocalHostScanner, RaspberryPiScanner, Scanner
+if ! command -v jq &>/dev/null; then
+    echo "jq could not be found"
+    exit
+fi
 
-logging.basicConfig(
-    level=logging.INFO,
-    stream=sys.stderr,
-    format="%(message)s",
+IPV4_REGEX="\b([0-9]{1,3}\.){3}[0-9]{1,3}\b"
+
+RASPI_MAC_OUIS=(
+    "b8:27:eb"
+    "dc:a6:32"
+    "e4:5f:01"
+    "dc:44:b6"
+    "d8:a0:1d"
+    "f4:5c:89"
+    "2c:cf:67"
 )
 
-if __name__ != "__main__":
-    raise RuntimeError("This module should be run as a script")
-
-iface = interfaces.get_working_if()
-if iface is None:
-    logging.critical("No working interface found")
-    exit(1)
-
-if iface.ip is None:
-    logging.critical("No IP address found")
-    exit(1)
-
-ip_range = ".".join(iface.ip.split(".")[0:3]) + ".0/24"
-
-scanners: dict[str, Scanner] = {
-    "raspberrypi": RaspberryPiScanner(ip_range),
-    "localhost": LocalHostScanner(),
-}
-
-output: dict[str, Any] = {
-    "_meta": {},
-    "localhost": {
-        "vars": {
-            "ansible_connection": "local",
-        },
-    },
-    "raspberrypi": {
-        "vars": {
-            "ansible_connection": "ssh",
-        }
-    },
-}
-
-
-if os.geteuid() != 0:
-    try:
-        # Use sudo to re-execute the script as root
-        logging.info("[sudo] password may be required.")
-        exit_code = subprocess.check_call(["sudo", sys.executable] + sys.argv)
-        # Exit the non-root version of the script after re-executing it
-        exit(exit_code)
-    except subprocess.CalledProcessError:
-        logging.critical("Failed to re-execute the script as root. Exiting.")
-        exit(1)
-
-for host, scanner in scanners.items():
-    output[host]["hosts"] = [x.ip for x in scanner.scan()]
-
-print(json.dumps(output))
+sudo arp-scan \
+    --localnet \
+    --interface="$(
+        ip route | grep default | awk '{print $5}' | head -n1
+    )" |
+    tail -n +2 |
+    grep -E "$IPV4_REGEX" |
+    while read -r line; do
+        mac_addr=$(echo "$line" | awk '{print $2}')
+        ip_addr=$(echo "$line" | awk '{print $1}')
+        for mac_oui in "${RASPI_MAC_OUIS[@]}"; do
+            if echo "$mac_addr" | grep -q "$mac_oui"; then
+                echo "$ip_addr"
+            fi
+        done
+    done | sort -u | jq -R -s '
+{
+  "raspberrypi": {
+    "hosts": (split("\n") | map(select(length > 0))),
+    "vars": {
+      "ansible_connection": "ssh",
+      "ansible_user": "pi",
+      "ansible_password": "raspberry"
+    }
+  }
+}'

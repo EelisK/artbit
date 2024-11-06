@@ -20,7 +20,6 @@ rpi-gpio = "^0.7.1"
 pyright = "^1.1.381"
 ruff = "^0.6.7"
 pytest = "^8.3.3"
-scapy = "^2.6.0"
 ansible-dev-tools = "^24.10.0"
 ansible-lint = {version = "^24.9.2", markers = "platform_system != 'Windows'"}
 
