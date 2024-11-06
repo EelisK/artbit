@@ -2,25 +2,18 @@
 
 > etymology: art made with heartbeats
 
-## Setup
+## Dependencies
 
-To use this project, you need to have a RabbitMQ instance running.
-You can configure the connection details using environment variables.
+- [ansible](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html)
+- [python](https://www.python.org/downloads/)
+- [pip](https://pip.pypa.io/en/stable/installation/)
+- [poetry](https://python-poetry.org/docs/#installation)
+- [arp-scan](https://www.kali.org/tools/arp-scan/)
 
-This can be eachieved by creating a `.env` file with the following contents:
-
-```
-export RMQ_HOST="your-rmq-instance"
-export RMQ_PORT="your-rmq-port"
-export RMQ_VHOST="your-rmq-vhost"
-export RMQ_USERNAME="your-rmq-username"
-export RMQ_PASSWORD="your-rmq-password"
-```
-
-## Usage
-
-Development can be done by running the module directly.
+## Development
 
 ```bash
-(source .env && python -m artbit)
+ansible-playbook playbooks/setup.yml # Install dependencies and setup the environment on raspberry PIs on the network
+ansible-playbook playbooks/fetch.yml # Fetch data from raspberry PIs on the network
+python -m artbit # Run the application
 ```
