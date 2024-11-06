@@ -1,25 +1,25 @@
 #!/bin/bash
 
 if ! command -v arp-scan &>/dev/null; then
-    echo "arp-scan could not be found"
-    exit
+    echo "arp-scan could not be found" >&2
+    exit 1
 fi
 
 if ! command -v jq &>/dev/null; then
-    echo "jq could not be found"
-    exit
+    echo "jq could not be found" >&2
+    exit 1
 fi
 
 IPV4_REGEX="\b([0-9]{1,3}\.){3}[0-9]{1,3}\b"
 
+# https://macaddress.io/statistics/company/27594
 RASPI_MAC_OUIS=(
-    "b8:27:eb"
-    "dc:a6:32"
-    "e4:5f:01"
-    "dc:44:b6"
-    "d8:a0:1d"
-    "f4:5c:89"
     "2c:cf:67"
+    "d8:3a:dd"
+    "28:cd:c1"
+    "e4:5f:01"
+    "3a:35:41"
+    "dc:a6:32"
 )
 
 sudo arp-scan \
@@ -27,7 +27,7 @@ sudo arp-scan \
     --interface="$(
         ip route | grep default | awk '{print $5}' | head -n1
     )" |
-    tail -n +2 |
+    tail -n +1 |
     grep -E "$IPV4_REGEX" |
     while read -r line; do
         mac_addr=$(echo "$line" | awk '{print $2}')
@@ -45,6 +45,12 @@ sudo arp-scan \
       "ansible_connection": "ssh",
       "ansible_user": "pi",
       "ansible_password": "raspberry"
+    }
+  },
+  "localhost": {
+    "hosts": ["127.0.0.1"],
+    "vars": {
+      "ansible_connection": "local"
     }
   }
 }'
