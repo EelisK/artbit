@@ -1,5 +1,6 @@
 ---
 - name: git | Install
+  become: true
   ansible.builtin.apt:
     name: git
     state: present
