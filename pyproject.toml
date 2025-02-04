@@ -15,6 +15,7 @@ pygame = "2.5.2"
 smbus2 = "0.4.3"
 ansible-core = "^2.17.5"
 rpi-gpio = {version = "^0.7.1", markers = "platform_system == 'Linux'"}
+gpiozero = "^2.0.1"
 
 [tool.poetry.group.dev.dependencies]
 pyright = "^1.1.381"
