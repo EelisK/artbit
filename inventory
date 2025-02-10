@@ -1,43 +1,59 @@
 #!/bin/bash
 
+# Check if running in GitHub Actions CI
+if [ -n "$GITHUB_ACTIONS" ]; then
+  cat <<EOF
+{
+  "raspberrypi": {
+    "hosts": ["127.0.0.1"]
+  },
+  "localhost": {
+    "hosts": ["127.0.0.1"]
+  }
+}
+EOF
+  exit 0
+fi
+
 if ! command -v arp-scan &>/dev/null; then
-    echo "arp-scan could not be found" >&2
-    exit 1
+  echo "arp-scan is not installed" >&2
+  exit 1
 fi
 
 if ! command -v jq &>/dev/null; then
-    echo "jq could not be found" >&2
-    exit 1
+  echo "jq is not installed" >&2
+  exit 1
 fi
 
 IPV4_REGEX="\b([0-9]{1,3}\.){3}[0-9]{1,3}\b"
 
 # https://macaddress.io/statistics/company/27594
 RASPI_MAC_OUIS=(
-    "2c:cf:67"
-    "d8:3a:dd"
-    "28:cd:c1"
-    "e4:5f:01"
-    "3a:35:41"
-    "dc:a6:32"
+  "2c:cf:67"
+  "d8:3a:dd"
+  "28:cd:c1"
+  "e4:5f:01"
+  "3a:35:41"
+  "dc:a6:32"
+  "b8:27:eb"
 )
 
 sudo arp-scan \
-    --localnet \
-    --interface="$(
-        ip route | grep default | awk '{print $5}' | head -n1
-    )" |
-    tail -n +1 |
-    grep -E "$IPV4_REGEX" |
-    while read -r line; do
-        mac_addr=$(echo "$line" | awk '{print $2}')
-        ip_addr=$(echo "$line" | awk '{print $1}')
-        for mac_oui in "${RASPI_MAC_OUIS[@]}"; do
-            if echo "$mac_addr" | grep -q "$mac_oui"; then
-                echo "$ip_addr"
-            fi
-        done
-    done | sort -u | jq -R -s '
+  --localnet \
+  --interface="$(
+    ip route | grep default | awk '{print $5}' | head -n1
+  )" |
+  tail -n +1 |
+  grep -E "$IPV4_REGEX" |
+  while read -r line; do
+    mac_addr=$(echo "$line" | awk '{print $2}')
+    ip_addr=$(echo "$line" | awk '{print $1}')
+    for mac_oui in "${RASPI_MAC_OUIS[@]}"; do
+      if echo "$mac_addr" | grep -q "$mac_oui"; then
+        echo "$ip_addr"
+      fi
+    done
+  done | sort -u | jq -R -s '
 {
   "raspberrypi": {
     "hosts": (split("\n") | map(select(length > 0))),
