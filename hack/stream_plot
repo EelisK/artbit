@@ -1,0 +1,197 @@
+#!/usr/bin/env python3
+
+import argparse
+import sys
+import time
+from datetime import datetime, timedelta
+from enum import Enum
+from typing import Dict, List
+
+import matplotlib.dates as mdates  # pyright: ignore
+import matplotlib.pyplot as plt  # pyright: ignore
+
+
+class AggregationType(Enum):
+    AVERAGE = "average"
+    MAX = "max"
+    MIN = "min"
+
+    def __str__(self) -> str:
+        return self.value
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Plot streaming voltage data with a sliding window"
+    )
+    parser.add_argument(
+        "--window",
+        type=float,
+        default=10.0,
+        help="Sliding window size in seconds (default: 10.0)",
+    )
+    parser.add_argument(
+        "--bucket-size",
+        type=float,
+        default=0.05,
+        help="Size of time buckets for aggregation in seconds (default: 0.05)",
+    )
+    parser.add_argument(
+        "--plot-interval",
+        type=float,
+        default=0.05,
+        help="Update plot every interval in seconds (default: 0.05)",
+    )
+    parser.add_argument(
+        "--aggregation",
+        type=AggregationType,
+        nargs="+",
+        choices=list(AggregationType),
+        default=[AggregationType.AVERAGE],
+        help="One or more aggregation methods to plot (default: average)",
+    )
+    return parser.parse_args()
+
+
+class TimeBucket:
+    def __init__(self):
+        self.values: List[float] = []
+        self.sum = 0.0
+        self.max_value = float("-inf")
+        self.min_value = float("inf")
+
+    def add(self, value: float) -> None:
+        self.values.append(value)
+        self.sum += value
+        self.max_value = max(self.max_value, value)
+        self.min_value = min(self.min_value, value)
+
+    def get_value(self, agg_type: AggregationType) -> float:
+        if not self.values:
+            return 0.0
+
+        if agg_type == AggregationType.AVERAGE:
+            return self.sum / len(self.values)
+        elif agg_type == AggregationType.MAX:
+            return self.max_value
+        else:  # MIN
+            return self.min_value
+
+
+def main():
+    args = parse_args()
+    window_size = args.window
+    bucket_size = args.bucket_size
+
+    # Initialize plot
+    plt.ion()  # Enable interactive mode
+    fig, ax = plt.subplots(figsize=(12, 6))
+
+    # Create a line for each aggregation type with different colors
+    lines = {}
+    colors = {"average": "b", "max": "r", "min": "g"}
+    for agg_type in args.aggregation:
+        (line,) = ax.plot(
+            [], [], f"{colors[str(agg_type)]}-", linewidth=1, label=str(agg_type)
+        )
+        lines[agg_type] = line
+
+    # Add legend if multiple aggregations
+    if len(args.aggregation) > 1:
+        ax.legend()
+
+    # Initialize data storage
+    # Use dictionary to store time buckets
+    buckets: Dict[int, TimeBucket] = {}
+
+    def get_bucket_key(t: float) -> int:
+        return int(t / bucket_size)
+
+    # Set up the plot
+    ax.set_xlabel("Time")
+    ax.set_ylabel("Voltage")
+    ax.set_ylim(0, 1)  # Voltage range from 0 to 1
+    ax.grid(True)
+
+    # Configure time formatting - only show HH:MM:SS
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M:%S"))
+    locator = mdates.AutoDateLocator(minticks=3, maxticks=7)
+    ax.xaxis.set_major_locator(locator)
+    fig.autofmt_xdate()
+
+    # For performance optimization
+    last_plot_update = time.time()
+    update_interval = args.plot_interval
+
+    try:
+        while True:
+            # Read line from stdin
+            input_line = sys.stdin.readline().strip()
+            if not input_line:
+                break
+
+            try:
+                # Parse time and voltage
+                epoch_time, voltage = map(float, input_line.split())
+
+                # Add to appropriate bucket
+                bucket_key = get_bucket_key(epoch_time)
+                if bucket_key not in buckets:
+                    buckets[bucket_key] = TimeBucket()
+                buckets[bucket_key].add(voltage)
+
+                # Update plot only every update_interval seconds
+                current_time_real = time.time()
+                if current_time_real - last_plot_update >= update_interval:
+                    if buckets:
+                        # Remove old buckets
+                        current_bucket = get_bucket_key(epoch_time)
+                        oldest_allowed = get_bucket_key(epoch_time - window_size)
+                        buckets = {
+                            k: v
+                            for k, v in buckets.items()
+                            if oldest_allowed <= k <= current_bucket
+                        }
+
+                        # Convert bucket times for plotting
+                        bucket_times = [k * bucket_size for k in buckets.keys()]
+                        plot_dates = [
+                            mdates.date2num(datetime.fromtimestamp(t))
+                            for t in bucket_times
+                        ]
+
+                        # Update each line with its aggregation
+                        for agg_type in args.aggregation:
+                            bucket_values = [
+                                bucket.get_value(agg_type)
+                                for bucket in buckets.values()
+                            ]
+                            lines[agg_type].set_data(plot_dates, bucket_values)
+
+                        # Update x-axis limits
+                        current_time = datetime.fromtimestamp(epoch_time)
+                        start_time = current_time - timedelta(seconds=window_size)
+                        xmin = mdates.date2num(start_time)
+                        xmax = mdates.date2num(
+                            current_time + timedelta(seconds=window_size * 0.1)
+                        )
+                        ax.set_xlim(xmin, xmax)
+
+                        # Draw plot
+                        fig.canvas.draw()
+                        fig.canvas.flush_events()
+                        last_plot_update = current_time_real
+
+            except ValueError:
+                print(f"Skipping invalid line: {input_line}", file=sys.stderr)
+                continue
+
+    except KeyboardInterrupt:
+        print("\nExiting...", file=sys.stderr)
+
+    plt.ioff()
+    plt.close()
+
+
+if __name__ == "__main__":
+    main()
