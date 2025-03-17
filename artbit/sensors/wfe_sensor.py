@@ -17,6 +17,7 @@ class Voltage:
 
     value: float
     interval: float
+    time: float
 
 
 class VoltageReader:
@@ -43,6 +44,7 @@ class VoltageReader:
             yield Voltage(
                 value=value,
                 interval=self.read_interval_seconds,
+                time=current_time,
             )
             time.sleep(
                 max(self.read_interval_seconds - (time.time() - current_time), 0)
