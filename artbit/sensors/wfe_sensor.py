@@ -1,23 +1,13 @@
 import logging
 import time
 from collections.abc import Generator
-from dataclasses import dataclass
 from typing import Any
 
 from gpiozero.spi_devices import MCP3xxx  # pyright: ignore[reportMissingTypeStubs]
 
+from artbit.schemas import Voltage
+
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class Voltage:
-    """
-    Voltage represents a single reading from the VoltageReader
-    """
-
-    value: float
-    interval: float
-    time: float
 
 
 class VoltageReader:
