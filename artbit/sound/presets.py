@@ -184,12 +184,18 @@ class BrownNoise(ChannelAdapter):
         low_pass_filters: list[tuple[NDArray[np.float32], NDArray[np.float32]]] = []
         filter_order = 4
         frequency_bands_hz = [5, 10, 20, 40, 80, 160, 320]
+        frequency_amplitudes = [1, 0.5, 0.25, 0.125, 0.0625, 0.03125, 0.015625]
 
         for freq in frequency_bands_hz:
             b, a = signal.butter(  # pyright: ignore
                 filter_order, freq / (self.channel_param.framerate / 2), btype="low"
             )  # pyright: ignore
             low_pass_filters.append((b, a))  # pyright: ignore
+
+        for i, (b, a) in enumerate(low_pass_filters):
+            b = b * frequency_amplitudes[i]
+            a = a * frequency_amplitudes[i]
+            low_pass_filters[i] = (b, a)
 
         # Generate multiple layers of brown noise with different frequencies
         brown_noise_layers: list[NDArray[np.float32]] = []
