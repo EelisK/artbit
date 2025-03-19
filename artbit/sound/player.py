@@ -39,9 +39,13 @@ class WavRecorder:
 
         with wave.open(self.filename, "wb") as file:
             file.setnchannels(self.channel_count)
-            file.setsampwidth(self.channel_bit_depth)
+            file.setsampwidth(self.sample_width)
             file.setframerate(self.channel_frame_rate)
             file.writeframes(frames)
+
+    @property
+    def sample_width(self):
+        return abs(self.channel_bit_depth) // 8
 
 
 class LoopPlayer:
@@ -58,7 +62,7 @@ class LoopPlayer:
         self.__thread = None
         self.__sound = sound
         self.__recorder = recorder
-        self.__crossfade_percentage = 0.02  # 2% of sound length for crossfade
+        self.__crossfade_percentage = 0.10
         self.__crossfaded_sound = None
 
     def start(self):
