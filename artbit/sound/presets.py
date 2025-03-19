@@ -22,70 +22,153 @@ class CompositeSound(ChannelAdapter):
         super().__init__(composite_wave)
 
 
-class HB(ChannelAdapter):
-    def __init__(self, bpm: int) -> None:
-        sound_duration = (bpm / 60.0) ** -1
-
-        lub_duration = 0.12 * sound_duration
-        dub_duration = 0.1 * sound_duration
-        remainder_duration = sound_duration - lub_duration - dub_duration
-
-        lub = LowPassFilter(100, lub_duration)
-        dub = LowPassFilter(50, dub_duration)
-        remainder = Silence(remainder_duration)
-        brown_noise = BrownNoise(sound_duration)
-
-        composite = (lub | dub | remainder) * brown_noise
-
-        super().__init__(composite.wave)
-
-
-class HeartbeatSound(ChannelAdapter):
+class GaussianPulse(ChannelAdapter):
     """
-    Sound with sin-wave of given frequency
+    Generates a Gaussian pulse waveform
     """
 
-    HEARTBEAT_SOUND_FREQUENCY: int = 70
+    def __init__(self, length: int, sigma: float, amplitude: float = 1.0) -> None:
+        """Create a Gaussian pulse.
+
+        Args:
+            length: Length of the pulse in samples
+            sigma: Standard deviation of the Gaussian
+            amplitude: Maximum amplitude of the pulse
+        """
+        x = np.linspace(-length // 2, length // 2, length, dtype=np.float32)
+        pulse = amplitude * np.exp(-(x**2) / (2 * sigma**2))
+        super().__init__(pulse)
+
+
+class DeepBrownNoise(ChannelAdapter):
+    """
+    Generates deep brown noise with emphasis on low frequencies
+    """
+
+    def __init__(self, length: int) -> None:
+        """Create deep brown noise.
+
+        Args:
+            length: Length of the noise in samples
+            sample_rate: Sample rate in Hz
+        """
+        # White noise
+        white_noise: NDArray[np.float32] = np.random.normal(0, 1, length).astype(
+            np.float32
+        )
+
+        # Create brown noise by integrating white noise with stronger coefficient
+        brown: NDArray[np.float32] = np.zeros_like(white_noise)
+        brown[0] = white_noise[0]
+        for i in range(1, length):
+            # Higher coefficient (0.98) gives more emphasis to low frequencies
+            brown[i] = 0.98 * brown[i - 1] + white_noise[i] * 0.1
+
+        # Apply a low-pass filter to further emphasize bass
+        b, a = signal.butter(  # pyright: ignore
+            3, 150.0 / (self.channel_param.framerate / 2), btype="low"
+        )  # pyright: ignore
+        filtered_brown: NDArray[np.float32] = signal.filtfilt(b, a, brown)  # pyright: ignore
+
+        # Normalize
+        filtered_brown = filtered_brown / np.max(np.abs(filtered_brown))  # pyright: ignore
+        super().__init__(filtered_brown)  # pyright: ignore
+
+
+class HeartbeatSoundComponent(ChannelAdapter):
+    """Base class for heartbeat sound components."""
 
     def __init__(self, bpm: int) -> None:
-        self.sound_duration = (bpm / 60.0) ** -1
-        self.sample_count = round(self.sound_duration * self.channel_param.framerate)
+        """Initialize with BPM.
 
-        x_axis = np.linspace(
-            -self.sound_duration / 2,
-            self.sound_duration / 2,
-            self.sample_count,
-            dtype=np.float32,
-            endpoint=False,
-        )
-        y_axis = np.sin(2 * np.pi * x_axis * self.HEARTBEAT_SOUND_FREQUENCY)
-
-        delta = self.delta_laguerre()
-
-        super().__init__(y_axis * delta)
-
-    def delta_laguerre(self) -> NDArray[np.float32]:
+        Args:
+            bpm: Beats per minute
         """
-        Generate a delta using the Laguerre polynomials
-        """
-        delta_limit = 0.09
-        laguerre_order = 10
-        x = np.linspace(-1, 1, self.sample_count, dtype=np.float32, endpoint=False)
-        return np.power(np.e, -np.power(x, 2) / delta_limit) * np.absolute(
-            (np.polynomial.laguerre.lagval(2 * x / delta_limit, [0, laguerre_order]))  # pyright: ignore[reportUnknownArgumentType]
-            / delta_limit
-        )
+        self.beat_period = 60.0 / bpm
+        self.sample_count = round(self.beat_period * self.channel_param.framerate)
+        super().__init__(np.zeros(self.sample_count, dtype=np.float32))
 
-    def delta_dirac(self) -> NDArray[np.float32]:
+
+class LubSound(HeartbeatSoundComponent):
+    """Generates the 'lub' sound component."""
+
+    def __init__(self, bpm: int) -> None:
+        """Create the lub sound.
+
+        Args:
+            bpm: Beats per minute
         """
-        Generate a delta using the Dirac delta function
+        super().__init__(bpm)
+
+        # Generate the lub sound (S1) - sharper and louder
+        lub_width = int(0.07 * self.sample_count)
+        lub_pulse = GaussianPulse(2 * lub_width, sigma=lub_width / 3)
+        lub_peak = lub_pulse.wave / np.max(lub_pulse.wave)
+
+        # Position the sound in the beat period
+        lub_pos = int(0.2 * self.sample_count)
+
+        # Add lub sound to the waveform
+        for i in range(len(lub_peak)):
+            pos = (lub_pos - lub_width + i) % self.sample_count
+            self.wave[pos] = max(self.wave[pos], lub_peak[i])
+
+        # Apply envelope shaping
+        self.wave = self.wave**2  # Square for more pronounced curve
+
+
+class DubSound(HeartbeatSoundComponent):
+    """Generates the 'dub' sound component."""
+
+    def __init__(self, bpm: int) -> None:
+        """Create the dub sound.
+
+        Args:
+            bpm: Beats per minute
         """
-        x = np.linspace(-1, 1, self.sample_count, dtype=np.float32, endpoint=False)
-        delta_limit = 0.09
-        delta = np.power(np.e, -np.power(x / self.sound_duration / delta_limit, 2)) / (
-            delta_limit * np.sqrt(np.pi)
-        )
-        return delta
+        super().__init__(bpm)
+
+        # Generate the dub sound (S2) - softer and shorter
+        dub_width = int(0.05 * self.sample_count)
+        dub_pulse = GaussianPulse(2 * dub_width, sigma=dub_width / 3)
+        dub_peak = 0.6 * dub_pulse.wave / np.max(dub_pulse.wave)  # Smaller than S1
+
+        # Position the sound in the beat period
+        dub_pos = int(0.55 * self.sample_count)
+
+        # Add dub sound to the waveform
+        for i in range(len(dub_peak)):
+            pos = (dub_pos - dub_width + i) % self.sample_count
+            self.wave[pos] = max(self.wave[pos], dub_peak[i])
+
+        # Apply envelope shaping
+        self.wave = self.wave**2  # Square for more pronounced curve
+
+
+class RealisticHeartbeatSound(ChannelAdapter):
+    """
+    A hyper-realistic heartbeat sound generator that creates the characteristic "lub-dub" sound.
+    Uses Gaussian pulses for the main sounds and deep brown noise for added realism.
+    """
+
+    def __init__(self, bpm: int) -> None:
+        # Calculate the beat period and sample count
+        beat_period = 60.0 / bpm
+        sample_count = round(beat_period * self.channel_param.framerate)
+
+        # Generate the main sound components
+        lub_sound = LubSound(bpm)
+        dub_sound = DubSound(bpm)
+        brown_noise = DeepBrownNoise(sample_count)
+
+        # Combine the sounds
+        combined_sound = lub_sound.wave + dub_sound.wave
+        combined_sound = combined_sound * brown_noise.wave
+
+        # Normalize the sound
+        combined_sound = combined_sound / np.max(np.abs(combined_sound))
+
+        super().__init__(combined_sound)
 
 
 class BrownNoise(ChannelAdapter):
@@ -203,156 +286,3 @@ class FlatlineSound(ConstantFrequency):
 
     def __init__(self, duration: float) -> None:
         super().__init__(self.ECG_FLATLINE_FREQUENCY, duration)
-
-
-class RealisticHeartbeatSound(ChannelAdapter):
-    """
-    A realistic heartbeat sound that combines both the heartbeat waveform and brown noise
-    for added realism. Uses Gaussian pulses to create the characteristic "lub-dub" sound.
-    """
-
-    def __init__(self, bpm: int, frequency: float = 50.0) -> None:
-        # Use provided frequency or fall back to default
-        # Lower values (30-50) give deeper, more bassy heartbeats
-        # Higher values (70-100) give sharper, more pronounced heartbeats
-        self.frequency = frequency
-
-        # Calculate duration and samples based on BPM
-        duration = (bpm / 60.0) ** -1  # Duration of one heartbeat in seconds
-        sample_count = round(duration * self.channel_param.framerate)
-
-        # Create the heartbeat waveform
-        heartbeat = self._generate_heartbeat(sample_count)
-
-        # Generate and mix in brown noise
-        noise = self._generate_brown_noise(sample_count)
-
-        # Apply fade in/out to both components to ensure smooth transitions
-        fade_samples = int(0.05 * sample_count)  # 5% fade at start and end
-        fade_in = np.linspace(0, 1, fade_samples, dtype=np.float32)
-        fade_out = np.linspace(1, 0, fade_samples, dtype=np.float32)
-        fade_envelope = np.ones(sample_count, dtype=np.float32)
-        fade_envelope[:fade_samples] = fade_in
-        fade_envelope[-fade_samples:] = fade_out
-
-        # Smooth the envelope
-        fade_envelope = signal.savgol_filter(fade_envelope, 11, 2)  # pyright: ignore[reportUnknownVariableType]
-
-        # Apply fade to both components
-        heartbeat *= fade_envelope
-        noise *= fade_envelope
-
-        # Combine heartbeat and noise with adjusted mix ratio
-        wave = heartbeat * 0.999 + noise * 0.001
-
-        # Apply gentle compression instead of hard clipping
-        wave = self._compress_audio(wave, threshold=0.7, ratio=3.0)
-
-        super().__init__(wave)
-
-    def _generate_heartbeat(self, sample_count: int) -> NDArray[np.float32]:
-        """Generate the main heartbeat waveform with lub-dub sounds."""
-        period_samples = sample_count
-
-        # Adjust widths based on frequency - higher frequencies need narrower pulses
-        base_width_factor = 50.0 / self.frequency  # Scale width relative to 50Hz
-        s1_width = int(
-            0.12 * period_samples * base_width_factor
-        )  # Wider for smoother transition
-        s2_width = int(
-            0.1 * period_samples * base_width_factor
-        )  # Wider for smoother transition
-
-        # Generate Gaussian pulses with slopes adjusted for frequency
-        sigma_factor = np.sqrt(50.0 / self.frequency)  # Adjust sigma based on frequency
-        s1_peak = self._gaussian_pulse(
-            2 * s1_width, s1_width / (3 * sigma_factor), amplitude=1.2
-        )
-        s1_peak = s1_peak / np.max(s1_peak)
-
-        s2_peak = self._gaussian_pulse(
-            2 * s2_width, s2_width / (3 * sigma_factor), amplitude=1.0
-        )
-        s2_peak = 0.7 * s2_peak / np.max(s2_peak)
-
-        # Create the full waveform
-        wave = np.zeros(sample_count, dtype=np.float32)
-
-        # Position the lub sound at 20% of the cycle
-        s1_pos = int(0.2 * period_samples)
-        s1_start = max(0, s1_pos - s1_width)
-        s1_end = min(sample_count, s1_pos + s1_width)
-        if s1_end > s1_start:
-            # Apply smooth window to avoid discontinuities
-            window = np.hanning(s1_end - s1_start)
-            wave[s1_start:s1_end] = s1_peak[: (s1_end - s1_start)] * window
-
-        # Position the dub sound at 55% of the cycle
-        s2_pos = int(0.55 * period_samples)
-        s2_start = max(0, s2_pos - s2_width)
-        s2_end = min(sample_count, s2_pos + s2_width)
-        if s2_end > s2_start:
-            # Apply smooth window to avoid discontinuities
-            window = np.hanning(s2_end - s2_start)
-            wave[s2_start:s2_end] = s2_peak[: (s2_end - s2_start)] * window
-
-        # Apply gentler shaping for punch without introducing artifacts
-        # Scale the input to tanh based on frequency to maintain consistent "punchiness"
-        drive = 2.0 * np.sqrt(
-            self.frequency / 50.0
-        )  # More drive for higher frequencies
-        wave = np.tanh(wave * drive) * 0.7  # Soft clipping instead of hard squaring
-
-        return wave
-
-    def _gaussian_pulse(
-        self, length: int, sigma: float, amplitude: float = 1.0
-    ) -> NDArray[np.float32]:
-        """Generate a Gaussian pulse for heart sounds."""
-        x = np.linspace(-length // 2, length // 2, length, dtype=np.float32)
-        pulse = amplitude * np.exp(-(x**2) / (2 * sigma**2))
-        return pulse.astype(np.float32)
-
-    def _generate_brown_noise(self, length: int) -> NDArray[np.float32]:
-        """Generate deep brown noise with emphasis on low frequencies."""
-        # Generate white noise
-        white = np.random.normal(0, 1, length).astype(np.float32)
-
-        # Create brown noise through integration with gentler coefficients
-        brown = np.zeros(length, dtype=np.float32)
-        brown[0] = white[0]
-        for i in range(1, length):
-            brown[i] = 0.99 * brown[i - 1] + white[i] * 0.05  # Gentler coefficients
-
-        # Apply low-pass filter with cutoff scaled to match heartbeat frequency
-        cutoff = min(self.frequency * 1.6, 80)  # Scale cutoff with frequency, max 80Hz
-        b, a = signal.butter(2, cutoff / (length / 2), "low")  # pyright: ignore[reportUnknownVariableType]
-        filtered = signal.filtfilt(b, a, brown)  # pyright: ignore[reportUnknownArgumentType,reportUnknownVariableType]
-
-        # Normalize more gently
-        filtered = filtered / (np.max(np.abs(filtered)) + 1e-6)  # pyright: ignore
-        # Soft limiting
-        filtered = np.tanh(filtered * 1.2) * 0.7  # pyright: ignore
-
-        return filtered.astype(np.float32)
-
-    def _compress_audio(
-        self, wave: NDArray[np.float32], threshold: float = 0.7, ratio: float = 3.0
-    ) -> NDArray[np.float32]:
-        """Apply gentle compression to avoid sudden transitions."""
-        # Calculate the amount of gain reduction needed
-        gain_mask = np.abs(wave) > threshold
-        gain_reduction = np.zeros_like(wave)
-        gain_reduction[gain_mask] = (np.abs(wave[gain_mask]) - threshold) * (
-            1 - 1 / ratio
-        )
-
-        # Apply compression
-        compressed = np.copy(wave)
-        compressed[gain_mask] *= 1 - gain_reduction[gain_mask]
-
-        # Apply makeup gain
-        makeup_gain = 1.0 / (1.0 - (1.0 - 1.0 / ratio) * (1.0 - threshold))
-        compressed *= makeup_gain * 0.95  # Slight safety margin
-
-        return compressed
