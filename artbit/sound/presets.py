@@ -4,6 +4,57 @@ from scipy import signal  # pyright: ignore[reportMissingTypeStubs]
 
 from artbit.sound.adapter import ChannelAdapter
 
+LUB_SOUND_AMPLITUDE = 1.00
+DUB_SOUND_AMPLITUDE = 0.95
+
+
+class HeartbeatSound(ChannelAdapter):
+    """
+    Sound with sin-wave of given frequency
+    """
+
+    HEARTBEAT_SOUND_FREQUENCY: int = 40
+
+    def __init__(self, bpm: int) -> None:
+        self.sound_duration = (bpm / 60.0) ** -1
+        self.sample_count = round(self.sound_duration * self.channel_param.framerate)
+
+        x_axis = np.linspace(
+            -self.sound_duration / 2,
+            self.sound_duration / 2,
+            self.sample_count,
+            dtype=np.float32,
+            endpoint=False,
+        )
+        y_axis = np.sin(2 * np.pi * x_axis * self.HEARTBEAT_SOUND_FREQUENCY)
+
+        delta = self.delta_laguerre()
+
+        super().__init__(y_axis * delta)
+
+    def delta_laguerre(self) -> NDArray[np.float32]:
+        """
+        Generate a delta using the Laguerre polynomials
+        """
+        delta_limit = 0.09
+        laguerre_order = 10
+        x = np.linspace(-1, 1, self.sample_count, dtype=np.float32, endpoint=False)
+        return np.power(np.e, -np.power(x, 2) / delta_limit) * np.absolute(
+            (np.polynomial.laguerre.lagval(2 * x / delta_limit, [0, laguerre_order]))  # pyright: ignore[reportUnknownArgumentType]
+            / delta_limit
+        )
+
+    def delta_dirac(self) -> NDArray[np.float32]:
+        """
+        Generate a delta using the Dirac delta function
+        """
+        x = np.linspace(-1, 1, self.sample_count, dtype=np.float32, endpoint=False)
+        delta_limit = 0.09
+        delta = np.power(np.e, -np.power(x / self.sound_duration / delta_limit, 2)) / (
+            delta_limit * np.sqrt(np.pi)
+        )
+        return delta
+
 
 class CompositeSound(ChannelAdapter):
     def __init__(self, sounds: list[ChannelAdapter]) -> None:
@@ -103,7 +154,7 @@ class LubSound(HeartbeatSoundComponent):
         # Generate the lub sound (S1) - sharper and louder
         lub_width = int(0.07 * self.sample_count)
         lub_pulse = GaussianPulse(2 * lub_width, sigma=lub_width / 3)
-        lub_peak = lub_pulse.wave / np.max(lub_pulse.wave)
+        lub_peak = LUB_SOUND_AMPLITUDE * lub_pulse.wave / np.max(lub_pulse.wave)
 
         # Position the sound in the beat period
         lub_pos = int(0.2 * self.sample_count)
@@ -131,7 +182,9 @@ class DubSound(HeartbeatSoundComponent):
         # Generate the dub sound (S2) - softer and shorter
         dub_width = int(0.05 * self.sample_count)
         dub_pulse = GaussianPulse(2 * dub_width, sigma=dub_width / 3)
-        dub_peak = 0.6 * dub_pulse.wave / np.max(dub_pulse.wave)  # Smaller than S1
+        dub_peak = (
+            DUB_SOUND_AMPLITUDE * dub_pulse.wave / np.max(dub_pulse.wave)
+        )  # Smaller than S1
 
         # Position the sound in the beat period
         dub_pos = int(0.55 * self.sample_count)
@@ -168,7 +221,13 @@ class RealisticHeartbeatSound(ChannelAdapter):
         # Normalize the sound
         combined_sound = combined_sound / np.max(np.abs(combined_sound))
 
-        super().__init__(combined_sound)
+        # Apply high-pass filter with a cutoff frequency of 500 Hz and 6db roll-off
+        b, a = signal.butter(  # pyright: ignore
+            1, 50.0 / (self.channel_param.framerate / 2), btype="high"
+        )
+        combined_sound = signal.filtfilt(b, a, combined_sound)  # pyright: ignore
+
+        super().__init__(combined_sound)  # pyright: ignore
 
 
 class BrownNoise(ChannelAdapter):
@@ -183,8 +242,14 @@ class BrownNoise(ChannelAdapter):
 
         low_pass_filters: list[tuple[NDArray[np.float32], NDArray[np.float32]]] = []
         filter_order = 4
-        frequency_bands_hz = [5, 10, 20, 40, 80, 160, 320]
-        frequency_amplitudes = [1, 0.5, 0.25, 0.125, 0.0625, 0.03125, 0.015625]
+        # frequency_bands_hz = [50, 100, 150, 200]
+        # frequency_bands_hz = [5, 10, 20, 40, 80, 160, 250]
+        # frequency_amplitudes = [0.25, 0.25, 0.25, 0.125, 0.0625, 0.03125, 0.03125]
+
+        frequency_bands_hz = [5, 10, 20, 40, 80, 160, 250]
+        frequency_amplitudes = [0.0625, 0.125, 0.25, 0.125, 0.0625, 0.03125, 0.03125]
+        # watchmedo shell-command --pattern="*.py" --recursive --command='python eelis.py' .
+        # frequency_amplitudes = [0.25, 0.5, 0.75, 0.5]
 
         for freq in frequency_bands_hz:
             b, a = signal.butter(  # pyright: ignore
@@ -255,6 +320,12 @@ class ConstantFrequency(ChannelAdapter):
     """
     Sound with sin-wave of given frequency
     """
+
+    @classmethod
+    def from_sample_count(
+        cls, frequency: float, sample_count: int
+    ) -> "ConstantFrequency":
+        return cls(frequency, sample_count / cls.channel_param.framerate)
 
     def __init__(self, frequency: float, duration: float) -> None:
         sound_sample_count = round(duration * self.channel_param.framerate)
