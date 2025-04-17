@@ -27,7 +27,7 @@ var randomCmd = &cobra.Command{
 		return runApp(fx.New(
 			randomfx.Module,
 			kernelfx.Module,
-			plotfx.Module,
+			// plotfx.Module,
 		))
 	},
 }

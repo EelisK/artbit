@@ -2,9 +2,11 @@ package kernel
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/EelisK/artbit/internal/kernel/streamstat"
+	"github.com/EelisK/artbit/internal/kernel/waveform"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -71,16 +73,19 @@ func (k *Kernel) Start(context.Context) error {
 	}()
 
 	// Initialize value processors
-	rollingAvg := streamstat.NewAVG(20)
+	rollingAvg := streamstat.NewAVG(30)
 	rollingMinMaxScaler := streamstat.NewMovingMinMaxScaler(2000)
-	filters := []func(float64) bool{
-		// Sensible values only
-		// func(value float64) bool {
-		// 	minVal, maxVal := rollingMinMaxScaler.Get()
-		// 	size := maxVal - minVal
-		// 	return size > 0.1 && size < 0.9
-		// },
-	}
+
+	periodDetector := waveform.NewPeriodDetector(0.8)
+	periodDetector.SetLimit(waveform.PeriodLimit{
+		Min: 333 * time.Millisecond,  // 180 BPM
+		Max: 1500 * time.Millisecond, // 40 BPM
+	})
+
+	periodDetector.AddListener(func(period time.Duration) {
+		bpm := 60 / period.Seconds()
+		fmt.Printf("BPM: %v\n", bpm)
+	})
 
 	for value := range sourceCh {
 		// Add value to processors
@@ -98,11 +103,9 @@ func (k *Kernel) Start(context.Context) error {
 		// Transform value
 		value = rollingAvg.Get()
 		value = rollingMinMaxScaler.Scale(value)
-		for _, filter := range filters {
-			if !filter(value) {
-				continue
-			}
-		}
+
+		// Update period detector
+		periodDetector.Update(value)
 
 		// Output to sinks
 		eg := errgroup.Group{}

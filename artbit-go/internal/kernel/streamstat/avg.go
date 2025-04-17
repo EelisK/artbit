@@ -37,3 +37,10 @@ func (m *AVG) Get() float64 {
 func (m *AVG) Ready() bool {
 	return m.count >= m.windowSize
 }
+
+func (m *AVG) Reset() {
+	m.values = make([]float64, m.windowSize)
+	m.sum = 0
+	m.index = 0
+	m.count = 0
+}
