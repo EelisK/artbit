@@ -14,6 +14,7 @@ type Kernel struct {
 	Source   Source
 	Sinks    []Sink
 	Interval time.Duration
+	UI       TermUI
 }
 
 const (
@@ -23,8 +24,8 @@ const (
 var logger = log.New(log.Writer(), "kernel: ", log.LstdFlags)
 
 // New creates a new Default kernel with the given source.
-func New(source Source) *Kernel {
-	return &Kernel{Source: source, Interval: DefaultInterval}
+func New(source Source, ui TermUI) *Kernel {
+	return &Kernel{Source: source, Interval: DefaultInterval, UI: ui}
 }
 
 func (k *Kernel) SetInterval(interval time.Duration) {
@@ -38,6 +39,10 @@ func (k *Kernel) AddSink(sink Sink) {
 
 // Stop stops the kernel, including the source and all sinks.
 func (k *Kernel) Stop(context.Context) error {
+	if err := k.UI.Stop(); err != nil {
+		return err
+	}
+
 	if err := k.Source.Stop(); err != nil {
 		return err
 	}
@@ -112,9 +117,22 @@ func (k *Kernel) Start(context.Context) error {
 		}
 	})
 
+	if err := k.UI.Start(); err != nil {
+		return err
+	}
+
+	periodDetector.OnPeriod(func(period time.Duration) {
+		if err := k.UI.DrawWavePeriod(period); err != nil {
+			logger.Printf("failed to draw period: %v", err)
+		}
+	})
+
 	for value := range sourceCh {
 		// Update period detector
 		value = periodDetector.Update(value)
+		if err := k.UI.DrawValue(value); err != nil {
+			logger.Printf("failed to draw value: %v", err)
+		}
 	}
 
 	return nil

@@ -11,6 +11,7 @@ type Param struct {
 	fx.In
 
 	Source kernel.Source
+	UI     kernel.TermUI
 }
 
 type Result struct {
@@ -21,7 +22,7 @@ type Result struct {
 
 func New(p Param) Result {
 	// Initialize the kernel with the provided source
-	k := kernel.New(p.Source)
+	k := kernel.New(p.Source, p.UI)
 	return Result{Kernel: k}
 }
 

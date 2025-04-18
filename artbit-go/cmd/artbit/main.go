@@ -9,12 +9,14 @@ import (
 	"github.com/EelisK/artbit/module/kernelfx"
 	"github.com/EelisK/artbit/module/mcp3008fx"
 	"github.com/EelisK/artbit/module/randomfx"
+	"github.com/EelisK/artbit/module/termuifx"
 	"github.com/EelisK/artbit/module/udsfx"
 	"github.com/spf13/cobra"
 	"go.uber.org/fx"
 )
 
 var (
+	developmentMode bool
 	inputType       string
 	outputTypes     []string
 	outputUDSConfig udsfx.Config
@@ -45,12 +47,20 @@ func init() {
 		StringVar(&outputUDSConfig.SocketPath, "output-uds-socket", "/tmp/artbit.sock", "Socket path for UDS output")
 	rootCmd.PersistentFlags().
 		DurationVar(&outputUDSConfig.Timeout, "output-uds-timeout", 100*time.Millisecond, "Timeout for UDS output")
+	rootCmd.PersistentFlags().
+		BoolVar(&developmentMode, "dev", false, "Enable development mode")
 	rootCmd.AddCommand(runCmd)
 }
 
 func setupAndRun() error {
 	opts := []fx.Option{
 		kernelfx.Module,
+	}
+
+	if developmentMode {
+		opts = append(opts, termuifx.TCellModule)
+	} else {
+		opts = append(opts, termuifx.NullModule)
 	}
 
 	switch inputType {

@@ -6,10 +6,6 @@ import (
 	"go.uber.org/fx"
 )
 
-const (
-	DefaultWidth = 100
-)
-
 type Param struct {
 	fx.In
 }
