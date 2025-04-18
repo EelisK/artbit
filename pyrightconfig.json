@@ -1,7 +1,7 @@
 {
   "include": ["**/*.py"],
 
-  "exclude": ["**/__pycache__", ".venv"],
+  "exclude": ["**/__pycache__", ".venv", "backup"],
 
   "typeCheckingMode": "strict",
 
