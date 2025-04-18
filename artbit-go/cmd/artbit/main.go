@@ -1,18 +1,24 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/EelisK/artbit/module/kernelfx"
 	"github.com/EelisK/artbit/module/mcp3008fx"
-	"github.com/EelisK/artbit/module/plotfx"
 	"github.com/EelisK/artbit/module/randomfx"
+	"github.com/EelisK/artbit/module/udsfx"
 	"github.com/spf13/cobra"
 	"go.uber.org/fx"
 )
 
-var includePlot bool
+var (
+	inputType       string
+	outputTypes     []string
+	outputUDSConfig udsfx.Config
+)
 
 var rootCmd = &cobra.Command{
 	Use:   "artbit",
@@ -22,44 +28,53 @@ var rootCmd = &cobra.Command{
 	},
 }
 
-var randomCmd = &cobra.Command{
-	Use:   "random",
-	Short: "Run the artbit application with random input",
+var runCmd = &cobra.Command{
+	Use:   "run",
+	Short: "Run the artbit application",
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		return setupAndRun(
-			randomfx.Module,
-			kernelfx.Module,
-		)
-	},
-}
-
-var mcp3008Cmd = &cobra.Command{
-	Use:   "mcp3008",
-	Short: "Run the artbit application with MCP3008 input",
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		return setupAndRun(
-			mcp3008fx.Module,
-			kernelfx.Module,
-		)
+		return setupAndRun()
 	},
 }
 
 func init() {
 	rootCmd.PersistentFlags().
-		BoolVar(
-			&includePlot,
-			"plot",
-			false,
-			"Include plot module",
-		)
-	rootCmd.AddCommand(randomCmd)
-	rootCmd.AddCommand(mcp3008Cmd)
+		StringVar(&inputType, "input", "random", "Input type (random or mcp3008)")
+	rootCmd.PersistentFlags().
+		StringArrayVar(&outputTypes, "output", []string{}, "Output types (uds)")
+	rootCmd.PersistentFlags().
+		StringVar(&outputUDSConfig.SocketPath, "output-uds-socket", "/tmp/artbit.sock", "Socket path for UDS output")
+	rootCmd.PersistentFlags().
+		DurationVar(&outputUDSConfig.Timeout, "output-uds-timeout", 100*time.Millisecond, "Timeout for UDS output")
+	rootCmd.AddCommand(runCmd)
 }
 
-func setupAndRun(opts ...fx.Option) error {
-	if includePlot {
-		opts = append(opts, plotfx.Module)
+func setupAndRun() error {
+	opts := []fx.Option{
+		kernelfx.Module,
 	}
+
+	switch inputType {
+	case "random":
+		opts = append(opts, randomfx.Module)
+	case "mcp3008":
+		opts = append(opts, mcp3008fx.Module)
+	default:
+		return fmt.Errorf("invalid input type: %s", inputType)
+	}
+
+	if len(outputTypes) == 0 {
+		return fmt.Errorf("no output types specified")
+	}
+
+	for _, outputType := range outputTypes {
+		switch outputType {
+		case "uds":
+			opts = append(opts, fx.Supply(&outputUDSConfig), udsfx.Module)
+		default:
+			return fmt.Errorf("invalid output type: %s", outputType)
+		}
+	}
+
 	app := fx.New(opts...)
 	if err := app.Err(); err != nil {
 		return err

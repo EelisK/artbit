@@ -2,7 +2,7 @@ package kernel
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"time"
 
 	"github.com/EelisK/artbit/internal/kernel/waveform"
@@ -19,6 +19,8 @@ type Kernel struct {
 const (
 	DefaultInterval = 2 * time.Millisecond
 )
+
+var logger = log.New(log.Writer(), "kernel: ", log.LstdFlags)
 
 // New creates a new Default kernel with the given source.
 func New(source Source) *Kernel {
@@ -53,6 +55,12 @@ func (k *Kernel) Stop(context.Context) error {
 func (k *Kernel) Start(context.Context) error {
 	if err := k.Source.Start(); err != nil {
 		return err
+	}
+
+	for _, sink := range k.Sinks {
+		if err := sink.Start(); err != nil {
+			return err
+		}
 	}
 
 	sourceCh := make(chan float64)
@@ -91,15 +99,7 @@ func (k *Kernel) Start(context.Context) error {
 	})
 
 	periodDetector.OnPeriod(func(period time.Duration) {
-		bpm := 60 / period.Seconds()
-		fmt.Printf("BPM: %v\n", bpm)
-	})
-
-	for value := range sourceCh {
-
-		// Update period detector
-		value = periodDetector.Update(value)
-
+		value := 60 / period.Seconds()
 		// Output to sinks
 		eg := errgroup.Group{}
 		for _, sink := range k.Sinks {
@@ -108,8 +108,13 @@ func (k *Kernel) Start(context.Context) error {
 			})
 		}
 		if err := eg.Wait(); err != nil {
-			return err
+			logger.Printf("failed to write to sink: %v", err)
 		}
+	})
+
+	for value := range sourceCh {
+		// Update period detector
+		value = periodDetector.Update(value)
 	}
 
 	return nil
