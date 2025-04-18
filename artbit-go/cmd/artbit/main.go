@@ -8,6 +8,7 @@ import (
 
 	"github.com/EelisK/artbit/module/kernelfx"
 	"github.com/EelisK/artbit/module/mcp3008fx"
+	"github.com/EelisK/artbit/module/nullfx"
 	"github.com/EelisK/artbit/module/randomfx"
 	"github.com/EelisK/artbit/module/termuifx"
 	"github.com/EelisK/artbit/module/udsfx"
@@ -80,6 +81,8 @@ func setupAndRun() error {
 		switch outputType {
 		case "uds":
 			opts = append(opts, fx.Supply(&outputUDSConfig), udsfx.Module)
+		case "null":
+			opts = append(opts, nullfx.Module)
 		default:
 			return fmt.Errorf("invalid output type: %s", outputType)
 		}
