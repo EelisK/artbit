@@ -12,6 +12,8 @@ import (
 	"go.uber.org/fx"
 )
 
+var includePlot bool
+
 var rootCmd = &cobra.Command{
 	Use:   "artbit",
 	Short: "Artbit is a tool for creating art raspberry pi projects.",
@@ -24,11 +26,10 @@ var randomCmd = &cobra.Command{
 	Use:   "random",
 	Short: "Run the artbit application with random input",
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		return runApp(fx.New(
+		return setupAndRun(
 			randomfx.Module,
 			kernelfx.Module,
-			// plotfx.Module,
-		))
+		)
 	},
 }
 
@@ -36,20 +37,30 @@ var mcp3008Cmd = &cobra.Command{
 	Use:   "mcp3008",
 	Short: "Run the artbit application with MCP3008 input",
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		return runApp(fx.New(
+		return setupAndRun(
 			mcp3008fx.Module,
 			kernelfx.Module,
-			plotfx.Module,
-		))
+		)
 	},
 }
 
 func init() {
+	rootCmd.PersistentFlags().
+		BoolVar(
+			&includePlot,
+			"plot",
+			false,
+			"Include plot module",
+		)
 	rootCmd.AddCommand(randomCmd)
 	rootCmd.AddCommand(mcp3008Cmd)
 }
 
-func runApp(app *fx.App) error {
+func setupAndRun(opts ...fx.Option) error {
+	if includePlot {
+		opts = append(opts, plotfx.Module)
+	}
+	app := fx.New(opts...)
 	if err := app.Err(); err != nil {
 		return err
 	}

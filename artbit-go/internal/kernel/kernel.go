@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/EelisK/artbit/internal/kernel/streamstat"
 	"github.com/EelisK/artbit/internal/kernel/waveform"
 	"golang.org/x/sync/errgroup"
 )
@@ -72,14 +71,23 @@ func (k *Kernel) Start(context.Context) error {
 		}
 	}()
 
-	// Initialize value processors
-	rollingAvg := streamstat.NewAVG(30)
-	rollingMinMaxScaler := streamstat.NewMovingMinMaxScaler(2000)
-
 	periodDetector := waveform.NewPeriodDetector(0.8)
-	periodDetector.SetLimit(waveform.PeriodLimit{
+
+	// Set period limits to a sensible range
+	periodDetector.SetPeriodLimit(waveform.TimeLimit{
 		Min: 333 * time.Millisecond,  // 180 BPM
 		Max: 1500 * time.Millisecond, // 40 BPM
+	})
+
+	// Set wave value limits to a sensible range
+	periodDetector.SetValueLimit(waveform.NumericLimit{
+		Min: 0.1,
+		Max: 0.98,
+	})
+	// Set wave amplitude limits to a sensible range
+	periodDetector.SetAmplitudeLimit(waveform.NumericLimit{
+		Min: 0.1,
+		Max: 0.9,
 	})
 
 	periodDetector.AddListener(func(period time.Duration) {
@@ -88,24 +96,9 @@ func (k *Kernel) Start(context.Context) error {
 	})
 
 	for value := range sourceCh {
-		// Add value to processors
-		rollingAvg.Add(value)
-		rollingMinMaxScaler.Add(value)
-
-		// Check if processors are ready
-		if !rollingAvg.Ready() {
-			continue
-		}
-		if !rollingMinMaxScaler.Ready() {
-			continue
-		}
-
-		// Transform value
-		value = rollingAvg.Get()
-		value = rollingMinMaxScaler.Scale(value)
 
 		// Update period detector
-		periodDetector.Update(value)
+		value = periodDetector.Update(value)
 
 		// Output to sinks
 		eg := errgroup.Group{}

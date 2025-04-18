@@ -23,20 +23,9 @@ func (s *Source) Start() error {
 }
 
 func (s *Source) Read() (float64, error) {
-	// value is a sine wave with a period of 1.3 seconds
-	samplePeriod := 0.002
-	sampleFrequency := 1 / samplePeriod
-	frequency := 1.3
-	value := math.Sin(2*math.Pi*frequency*float64(s.counter)/sampleFrequency) / 2
-	value += 0.5
-	s.counter++
-	s.randomCounter++
-	if s.randomCounter >= s.randomIndex {
-		s.randomIndex = rand.Int() % 100
-		s.randomCounter = 0
-		value += newRandom()
-		value = math.Min(math.Max(value, 0), 1)
-	}
+	value := s.newWaveValue()
+	value += s.getRandomness()
+	value = math.Min(math.Max(value, 0), 1)
 	return value, nil
 }
 
@@ -44,7 +33,33 @@ func (s *Source) Stop() error {
 	return nil
 }
 
-// creates a random number between -1 and 1
-func newRandom() float64 {
-	return rand.Float64()*2 - 1
+func (s *Source) getRandomness() float64 {
+	s.randomCounter++
+	if s.randomCounter >= s.randomIndex {
+		s.randomIndex = rand.Int() % 100
+		s.randomCounter = 0
+		return newRandom(-1, 1)
+	}
+	return 0
+}
+
+// creates a random number between start and end
+func newRandom(start, end float64) float64 {
+	return start + rand.Float64()*(end-start)
+}
+
+func (s *Source) newWaveValue() float64 {
+	// value is a sine wave with a period of 1.3 seconds and amplitude of 0.3
+	samplePeriod := 0.002
+	sampleFrequency := 1 / samplePeriod
+	frequency := 1.3
+	value := math.Sin(2*math.Pi*frequency*float64(s.counter)/sampleFrequency) / 2
+	value += 0.5
+	// now value is between 0 and 1
+	// so we add scale it to an amplitude range of 0.3 - 0.7
+	rangeStart := 0.3
+	rangeEnd := 0.7
+	value = value*(rangeEnd-rangeStart) + rangeStart
+	s.counter++
+	return value
 }
