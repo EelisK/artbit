@@ -13,7 +13,7 @@ var logger = log.New(log.Writer(), "waveform: ", log.LstdFlags)
 type PeriodDetector struct {
 	threshold float64
 
-	listeners []EventListener
+	periodListeners []PeriodListener
 
 	prevHighStart time.Time
 	prevHighEnd   time.Time
@@ -30,57 +30,17 @@ type PeriodDetector struct {
 	valueMinMax *streamstat.MinMaxScaler
 }
 
-type TimeLimit struct {
-	Min time.Duration
-	Max time.Duration
-}
-
-func (t TimeLimit) IsInRange(value time.Duration) bool {
-	if t.Min > 0 && value < t.Min {
-		return false
-	}
-	if t.Max > 0 && value > t.Max {
-		return false
-	}
-	return true
-}
-
-func (t TimeLimit) Duration() time.Duration {
-	if t.Min > 0 && t.Max > 0 {
-		return t.Max - t.Min
-	}
-	if t.Max > 0 {
-		return t.Max
-	}
-	return t.Min
-}
-
-type NumericLimit struct {
-	Min float64
-	Max float64
-}
-
-func (n NumericLimit) IsInRange(value float64) bool {
-	if n.Min > 0 && value < n.Min {
-		return false
-	}
-	if n.Max > 0 && value > n.Max {
-		return false
-	}
-	return true
-}
-
 // NewPeriodDetector creates a new PeriodDetector with the given threshold.
 func NewPeriodDetector(threshold float64) *PeriodDetector {
 	return &PeriodDetector{
-		threshold:     threshold,
-		listeners:     []EventListener{},
-		prevHighStart: time.Time{},
-		prevHighEnd:   time.Time{},
-		prevHigh:      time.Time{},
-		periodAvg:     streamstat.NewAVG(10),
-		valueAvg:      streamstat.NewAVG(20),
-		valueMinMax:   streamstat.NewMinMaxScaler(1000),
+		threshold:       threshold,
+		periodListeners: []PeriodListener{},
+		prevHighStart:   time.Time{},
+		prevHighEnd:     time.Time{},
+		prevHigh:        time.Time{},
+		periodAvg:       streamstat.NewAVG(10),
+		valueAvg:        streamstat.NewAVG(20),
+		valueMinMax:     streamstat.NewMinMaxScaler(1000),
 	}
 }
 
@@ -113,17 +73,14 @@ func (p *PeriodDetector) SetAmplitudeLimit(limit NumericLimit) {
 	p.amplitudeLimit = limit
 }
 
-// EventListener is a function type for period event listeners.
-type EventListener func(period time.Duration)
-
-// AddListener adds a new event listener.
-func (p *PeriodDetector) AddListener(listener EventListener) {
-	p.listeners = append(p.listeners, listener)
+// OnPeriod adds a new event listener for period events.
+func (p *PeriodDetector) OnPeriod(listener PeriodListener) {
+	p.periodListeners = append(p.periodListeners, listener)
 }
 
 // notifyListeners notifies all registered listeners of a new period.
 func (p *PeriodDetector) notifyListeners(period time.Duration) {
-	for _, listener := range p.listeners {
+	for _, listener := range p.periodListeners {
 		listener(period)
 	}
 }

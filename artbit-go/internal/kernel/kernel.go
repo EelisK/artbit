@@ -90,7 +90,7 @@ func (k *Kernel) Start(context.Context) error {
 		Max: 0.9,
 	})
 
-	periodDetector.AddListener(func(period time.Duration) {
+	periodDetector.OnPeriod(func(period time.Duration) {
 		bpm := 60 / period.Seconds()
 		fmt.Printf("BPM: %v\n", bpm)
 	})
