@@ -36,9 +36,9 @@ func (s *Source) Stop() error {
 func (s *Source) getRandomness() float64 {
 	s.randomCounter++
 	if s.randomCounter >= s.randomIndex {
-		s.randomIndex = rand.Int() % 100
+		s.randomIndex = rand.Int() % 50
 		s.randomCounter = 0
-		return newRandom(-1, 1)
+		return newRandom(-0.1, 0.1)
 	}
 	return 0
 }

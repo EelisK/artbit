@@ -16,10 +16,22 @@ type Param struct {
 	Kernel *kernel.Kernel
 }
 
+type Result struct {
+	fx.Out
+
+	Output *plot.Sink
+}
+
+func New(p Param) Result {
+	sink := plot.NewStderr(DefaultWidth)
+	return Result{Output: sink}
+}
+
 // Module provides the plot output sink to the kernel.
 // Kernel is assumed to be already present in the context.
 var Module = fx.Module("plot",
-	fx.Invoke(func(kernel *kernel.Kernel) {
-		kernel.AddSink(plot.NewStderr(DefaultWidth))
+	fx.Provide(New),
+	fx.Invoke(func(k *kernel.Kernel, o *plot.Sink) {
+		k.AddSink(o)
 	}),
 )
