@@ -35,14 +35,28 @@ func NewSink(socketPath string, timeout time.Duration) *Sink {
 
 // Start starts the UDS sink
 func (s *Sink) Start() error {
-	// Connect to the UDS socket
 	logger.Printf("connecting to UDS socket: %s", s.SocketPath)
-	conn, err := net.Dial("unix", s.SocketPath)
-	if err != nil {
-		return err
-	}
 
-	s.conn = conn
+	connCh := make(chan net.Conn)
+	makeConn := func() {
+		conn, err := net.Dial("unix", s.SocketPath)
+		if err != nil {
+			connCh <- nil
+			return
+		}
+		connCh <- conn
+	}
+	go makeConn()
+	select {
+	case <-time.After(s.Timeout):
+		return fmt.Errorf("timeout connecting to UDS socket: %s", s.SocketPath)
+	case conn := <-connCh:
+		if conn == nil {
+			return fmt.Errorf("failed to connect to UDS socket: %s", s.SocketPath)
+		}
+		logger.Printf("connected to UDS socket: %s", s.SocketPath)
+		s.conn = conn
+	}
 
 	go s.sendData()
 
@@ -78,8 +92,7 @@ func (s *Sink) sendData() {
 		select {
 		case data := <-s.dataCh:
 			if err := s.send(data); err != nil {
-				// Handle error
-				logger.Printf("failed to send data: %v", err)
+				panic(err)
 			}
 		case <-s.stopCh:
 			return

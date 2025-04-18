@@ -127,13 +127,15 @@ func (k *Kernel) Start(context.Context) error {
 		}
 	})
 
-	for value := range sourceCh {
-		// Update period detector
-		value = periodDetector.Update(value)
-		if err := k.UI.DrawValue(value); err != nil {
-			logger.Printf("failed to draw value: %v", err)
+	go func() {
+		for value := range sourceCh {
+			// Update period detector
+			value = periodDetector.Update(value)
+			if err := k.UI.DrawValue(value); err != nil {
+				logger.Printf("failed to draw value: %v", err)
+			}
 		}
-	}
+	}()
 
 	return nil
 }

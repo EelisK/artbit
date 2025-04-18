@@ -34,7 +34,9 @@ var Module = fx.Module(
 	fx.Invoke(func(k *kernel.Kernel, lc fx.Lifecycle) {
 		lc.Append(fx.Hook{
 			OnStart: func(ctx context.Context) error {
-				go k.Start(ctx)
+				if err := k.Start(ctx); err != nil {
+					return err
+				}
 				return nil
 			},
 			OnStop: func(ctx context.Context) error {
