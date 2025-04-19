@@ -1,62 +1,49 @@
 package streamstat
 
-// TODO: optimize
-type MinMaxScaler struct {
+// MinMax maintains a sliding window of values and provides
+// scaled values between 0 and 1 based on the min and max in the window.
+type MinMax struct {
 	windowSize int
-	values     []float64
+	min        *Min
+	max        *Max
 }
 
-func NewMinMaxScaler(windowSize int) *MinMaxScaler {
-	return &MinMaxScaler{
+// NewMinMax initializes a new WindowedMinMaxScaler.
+func NewMinMax(windowSize int) *MinMax {
+	return &MinMax{
 		windowSize: windowSize,
+		min:        NewMin(windowSize),
+		max:        NewMax(windowSize),
 	}
 }
 
-func (m *MinMaxScaler) Add(value float64) {
-	// Redact the oldest value if the window is full
-	if len(m.values) >= m.windowSize {
-		m.values = m.values[1:]
-	}
-
-	m.values = append(m.values, value)
+// Add adds a new value to the scaler and removes the oldest value if the window is full.
+func (s *MinMax) Add(value float64) {
+	s.min.Add(value)
+	s.max.Add(value)
 }
 
-func (m *MinMaxScaler) Get() (float64, float64) {
-	if len(m.values) == 0 {
-		return 0, 0
-	}
-	min := m.values[0]
-	max := m.values[0]
-	for _, v := range m.values {
-		if v < min {
-			min = v
-		}
-		if v > max {
-			max = v
-		}
-	}
-	return min, max
-}
-
-func (s *MinMaxScaler) GetRange() float64 {
-	min, max := s.Get()
-	return max - min
-}
-
-func (m *MinMaxScaler) Scale(value float64) float64 {
-	min, max := m.Get()
+// Scale scales the given value to the range [0, 1] based on the current window.
+func (s *MinMax) Scale(value float64) float64 {
+	min := s.min.Value()
+	max := s.max.Value()
 	if min == max {
-		return value
+		return 0.5 // Avoid division by zero
 	}
-	// scale to [0, 1]
-	value = (value - min) / (max - min)
-	return value
+	return (value - min) / (max - min)
 }
 
-func (m *MinMaxScaler) Ready() bool {
-	return len(m.values) >= m.windowSize
+func (s *MinMax) GetRange() float64 {
+	return s.max.Value() - s.min.Value()
 }
 
-func (m *MinMaxScaler) Reset() {
-	m.values = make([]float64, 0)
+// IsReady checks if the scaler is ready to provide scaled values.
+func (s *MinMax) Ready() bool {
+	return s.min.Ready() && s.max.Ready()
+}
+
+// Reset clears the scaler's state.
+func (s *MinMax) Reset() {
+	s.min.Reset()
+	s.max.Reset()
 }

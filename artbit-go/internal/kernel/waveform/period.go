@@ -27,7 +27,7 @@ type PeriodDetector struct {
 
 	periodAvg   *streamstat.AVG
 	valueAvg    *streamstat.AVG
-	valueMinMax *streamstat.MinMaxScaler
+	valueMinMax *streamstat.MinMax
 }
 
 // NewPeriodDetector creates a new PeriodDetector with the given threshold.
@@ -40,7 +40,7 @@ func NewPeriodDetector(threshold float64) *PeriodDetector {
 		prevHigh:        time.Time{},
 		periodAvg:       streamstat.NewAVG(10),
 		valueAvg:        streamstat.NewAVG(20),
-		valueMinMax:     streamstat.NewMinMaxScaler(1000),
+		valueMinMax:     streamstat.NewMinMax(1000),
 	}
 }
 
@@ -52,6 +52,7 @@ func (p *PeriodDetector) Update(value float64) float64 {
 
 // Reset resets the period detector state.
 func (p *PeriodDetector) Reset() {
+	logger.Println("Resetting period detector state")
 	p.prevHighStart = time.Time{}
 	p.prevHighEnd = time.Time{}
 	p.prevHigh = time.Time{}
@@ -110,7 +111,7 @@ func (p *PeriodDetector) handleValue(value float64) float64 {
 		return value
 	}
 
-	// Check if the value is within the amplitude limits
+	// Check if the range is within the amplitude limits
 	if minMaxRange := p.valueMinMax.GetRange(); !p.amplitudeLimit.IsInRange(minMaxRange) {
 		logger.Printf(
 			"Amplitude range %.3f is out of range: [%v, %v]\n",

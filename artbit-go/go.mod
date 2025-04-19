@@ -3,6 +3,8 @@ module github.com/EelisK/artbit
 go 1.24.2
 
 require (
+	github.com/Workiva/go-datastructures v1.1.5
+	github.com/gammazero/deque v1.0.0
 	github.com/gdamore/tcell/v2 v2.8.1
 	github.com/spf13/cobra v1.9.1
 	go.uber.org/fx v1.23.0
