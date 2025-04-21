@@ -4,7 +4,7 @@ from typing import Generator
 
 class Plugin(ABC):
     """
-    Plugin is a class used to determine how artbit should receive data
+    Plugin is a class used to determine how the client should receive data
     """
 
     @abstractmethod

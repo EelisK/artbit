@@ -3,9 +3,9 @@ import logging
 import sys
 from typing import Union
 
-from artbit.plugins.base import Plugin
-from artbit.sound import presets
-from artbit.sound.player import LoopPlayer
+from app.plugins.base import Plugin
+from app.sound import presets
+from app.sound.player import LoopPlayer
 
 logging.basicConfig(
     level=logging.INFO,
@@ -56,11 +56,11 @@ args = args_parser.parse_args()
 input_plugin: Union[Plugin, None] = None
 
 if args.stdin:
-    from artbit.plugins.stdin import StdInPlugin
+    from app.plugins.stdin import StdInPlugin
 
     input_plugin = StdInPlugin(prompt="Enter BPM: ")
 elif args.uds:
-    from artbit.plugins.uds import UDSPlugin
+    from app.plugins.uds import UDSPlugin
 
     input_plugin = UDSPlugin(
         path=args.uds_path,

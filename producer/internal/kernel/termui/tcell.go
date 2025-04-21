@@ -3,6 +3,7 @@ package termui
 import (
 	"fmt"
 	"log"
+	"sync"
 	"syscall"
 	"time"
 
@@ -101,25 +102,33 @@ func (t *TCell) DrawValue(value float64) error {
 	// Start from the bottom of the screen - 2
 	pillarStartY := y - 2
 	// The end of the pillar is at 10
-	pillarEndY := 10
+	pillarEndY := 3
 	// The maximum height of the pillar is 10
 	pillarMaxHeight := pillarStartY - pillarEndY
 
+	wg := sync.WaitGroup{}
+	wg.Add(len(t.graphValues))
+
 	for i, v := range t.graphValues {
-		pillarX := i
-		pillarHeight := int(v * float64(pillarMaxHeight))
-		pillarRangeStart := pillarStartY - pillarHeight
-		pillarRangeEnd := pillarStartY
+		go func(i int, v float64) {
+			defer wg.Done()
+			pillarX := i
+			pillarHeight := int(v * float64(pillarMaxHeight))
+			pillarRangeStart := pillarStartY - pillarHeight
+			pillarRangeEnd := pillarStartY
 
-		for pillarY := pillarRangeStart; pillarY <= pillarRangeEnd; pillarY++ {
-			t.screen.SetContent(pillarX, pillarY, '█', nil, t.style)
-		}
+			for pillarY := pillarRangeStart; pillarY <= pillarRangeEnd; pillarY++ {
+				t.screen.SetContent(pillarX, pillarY, '█', nil, t.style)
+			}
 
-		// Clear the area above the pillar
-		for pillarY := pillarEndY; pillarY < pillarRangeStart; pillarY++ {
-			t.screen.SetContent(pillarX, pillarY, ' ', nil, t.style)
-		}
+			// Clear the area above the pillar
+			for pillarY := pillarEndY; pillarY < pillarRangeStart; pillarY++ {
+				t.screen.SetContent(pillarX, pillarY, ' ', nil, t.style)
+			}
+		}(i, v)
 	}
+	// Wait for all goroutines to finish
+	wg.Wait()
 
 	// Refresh the screen to show changes
 	t.screen.Show()

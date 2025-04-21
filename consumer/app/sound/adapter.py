@@ -6,7 +6,7 @@ from pygame.mixer import Sound
 from pygame.mixer import get_init as mixer_get_init
 from pygame.mixer import init as mixer_init
 
-from artbit.singleton import SingletonMeta
+from app.singleton import SingletonMeta
 
 logger = logging.getLogger(__name__)
 

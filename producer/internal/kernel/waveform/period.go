@@ -19,6 +19,9 @@ type PeriodDetector struct {
 	prevHighEnd   time.Time
 	prevHigh      time.Time
 
+	currHigh      time.Time
+	currHighValue float64
+
 	periodCount uint64
 
 	periodLimit    TimeLimit
@@ -56,10 +59,11 @@ func (p *PeriodDetector) Reset() {
 	p.prevHighStart = time.Time{}
 	p.prevHighEnd = time.Time{}
 	p.prevHigh = time.Time{}
+	p.currHigh = time.Time{}
+	p.currHighValue = 0
 	p.periodCount = 0
 	p.periodAvg.Reset()
 	p.valueAvg.Reset()
-	p.valueMinMax.Reset()
 }
 
 func (p *PeriodDetector) SetPeriodLimit(limit TimeLimit) {
@@ -130,13 +134,17 @@ func (p *PeriodDetector) handleValue(value float64) float64 {
 	isNewHighStart := value > p.threshold && p.prevHighStart.IsZero()
 	if isNewHighStart {
 		p.prevHighStart = time.Now()
-		return value
 	}
 
 	// Check if we have exited a high
 	isNewHighEnd := value < p.threshold && p.prevHighEnd.IsZero() && !p.prevHighStart.IsZero()
 	if isNewHighEnd {
 		p.prevHighEnd = time.Now()
+	}
+
+	if value > p.threshold && value > p.currHighValue {
+		p.currHighValue = value
+		p.currHigh = time.Now()
 	}
 
 	return value
@@ -149,9 +157,7 @@ func (p *PeriodDetector) handlePeriod() {
 		return
 	}
 
-	highDuration := p.prevHighEnd.Sub(p.prevHighStart)
-	midpoint := highDuration / 2
-	currHigh := p.prevHighStart.Add(midpoint)
+	currHigh := p.currHigh
 
 	if !p.prevHigh.IsZero() {
 		period := currHigh.Sub(p.prevHigh)
@@ -179,6 +185,8 @@ func (p *PeriodDetector) handlePeriod() {
 		}
 	}
 
+	p.currHigh = time.Time{}
+	p.currHighValue = 0
 	p.prevHigh = currHigh
 	p.prevHighStart = time.Time{}
 	p.prevHighEnd = time.Time{}

@@ -1,6 +1,6 @@
 from typing import Generator
 
-from artbit.plugins.base import Plugin
+from app.plugins.base import Plugin
 
 
 class StdInPlugin(Plugin):
