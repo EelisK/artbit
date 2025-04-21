@@ -2,64 +2,52 @@ package random
 
 import (
 	"math"
-	"math/rand/v2"
+	"time"
 )
 
 type Source struct {
-	randomCounter int
-	randomIndex   int
-	counter       uint64
+	counter   uint64
+	startTime time.Time
+	noise     *NoiseGenerator
 }
 
 func NewSource() *Source {
 	return &Source{
-		randomCounter: 0,
-		randomIndex:   rand.Int() % 100,
+		counter: 0,
+		noise:   &NoiseGenerator{},
 	}
 }
 
 func (s *Source) Start() error {
-	return nil
+	s.startTime = time.Now()
+	return s.noise.Start()
 }
 
 func (s *Source) Read() (float64, error) {
+	noise, err := s.noise.Read()
+	if err != nil {
+		return 0, err
+	}
+
 	value := s.newWaveValue()
-	value += s.getRandomness()
+	value += noise
 	value = math.Min(math.Max(value, 0), 1)
 	return value, nil
 }
 
 func (s *Source) Stop() error {
-	return nil
-}
-
-func (s *Source) getRandomness() float64 {
-	s.randomCounter++
-	if s.randomCounter >= s.randomIndex {
-		s.randomIndex = rand.Int() % 50
-		s.randomCounter = 0
-		return newRandom(-0.1, 0.1)
-	}
-	return 0
-}
-
-// creates a random number between start and end
-func newRandom(start, end float64) float64 {
-	return start + rand.Float64()*(end-start)
+	return s.noise.Stop()
 }
 
 func (s *Source) newWaveValue() float64 {
-	// value is a sine wave with a period of 1.3 seconds and amplitude of 0.3
-	samplePeriod := 0.002
-	sampleFrequency := 1 / samplePeriod
-	frequency := 1.3
-	value := math.Sin(2*math.Pi*frequency*float64(s.counter)/sampleFrequency) / 2
-	value += 0.5
-	// now value is between 0 and 1
-	// so we add scale it to an amplitude range of 0.3 - 0.7
-	rangeStart := 0.3
-	rangeEnd := 0.7
-	value = value*(rangeEnd-rangeStart) + rangeStart
-	s.counter++
-	return value
+	currentTime := time.Now()
+	samplePeriod := currentTime.Sub(s.startTime).Seconds()
+	wavePeriod := 1.3
+	value := math.Sin(2*math.Pi*wavePeriod*samplePeriod) / 2
+	return scale(value, 0.3, 0.7)
+}
+
+// scale scales a value from one range to another
+func scale(value, min, max float64) float64 {
+	return value*(max-min) + min
 }
