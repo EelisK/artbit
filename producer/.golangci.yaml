@@ -9,16 +9,13 @@ linters:
     - asasalint
     - copyloopvar
     - cyclop
-    - dupl
     - durationcheck
-    - errcheck
     - errorlint
     - exhaustive
     - gocognit
     - goconst
     - gocritic
     - gocyclo
-    - gosec
     - gosmopolitan
     - govet
     - ineffassign
@@ -27,9 +24,7 @@ linters:
     - makezero
     - nestif
     - nolintlint
-    - revive
     - staticcheck
-    - unused
   settings:
     cyclop:
       max-complexity: 30

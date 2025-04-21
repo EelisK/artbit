@@ -1,0 +1,56 @@
+---
+# yamllint disable rule:truthy
+
+name: Consumer Quality Checks
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./consumer
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get python version
+        id: python-version
+        run: |
+          echo "value=$(cat .python-version)" >> $GITHUB_OUTPUT
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "${{ steps.python-version.outputs.value }}"
+      - name: Install and configure Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: "${{ inputs.poetry-version }}"
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          virtualenvs-path: .venv
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          working-directory: ${{ inputs.working-directory }}
+          key: venv-${{ runner.os }}-${{ inputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        shell: bash
+        run: poetry install --no-interaction --no-root --all-extras
+
+      - name: Check formatting with ruff
+        run: poetry run ruff check
+      - name: Check imports with ruff
+        run: poetry run ruff check --select I
+      - name: Check types with pyright
+        run: poetry run pyright

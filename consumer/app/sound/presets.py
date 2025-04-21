@@ -2,7 +2,7 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy import signal  # pyright: ignore[reportMissingTypeStubs]
 
-from artbit.sound.adapter import ChannelAdapter
+from app.sound.adapter import ChannelAdapter
 
 LUB_SOUND_AMPLITUDE = 1.00
 DUB_SOUND_AMPLITUDE = 0.95

@@ -64,7 +64,6 @@ func (p *PeriodDetector) Reset() {
 	p.periodCount = 0
 	p.periodAvg.Reset()
 	p.valueAvg.Reset()
-	p.valueMinMax.Reset()
 }
 
 func (p *PeriodDetector) SetPeriodLimit(limit TimeLimit) {
