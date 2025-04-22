@@ -3,3 +3,5 @@
   ansible.builtin.include_tasks: python.yml
 - name: Install git
   ansible.builtin.include_tasks: git.yml
+- name: Install golang
+  ansible.builtin.include_tasks: golang.yml

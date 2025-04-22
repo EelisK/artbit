@@ -1,0 +1,8 @@
+---
+- name: producer | Reload
+  become: true
+  ansible.builtin.systemd:
+    name: "{{ producer_service_name }}"
+    state: restarted
+    daemon_reload: true
+    enabled: true

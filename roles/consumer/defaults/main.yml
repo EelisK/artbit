@@ -1,0 +1,3 @@
+---
+consumer_setup_dir: /opt/artbit/consumer
+consumer_service_name: artbit-consumer.service

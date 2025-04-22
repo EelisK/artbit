@@ -1,0 +1,29 @@
+---
+- name: golang | Download and extrect package
+  become: true
+  ansible.builtin.unarchive:
+    src: https://go.dev/dl/go1.24.2.linux-arm64.tar.gz
+    remote_src: true
+    dest: /usr/local
+
+- name: golang | Link binaries to /usr/bin
+  become: true
+  ansible.builtin.file:
+    src: "/usr/local/go/bin/{{ item }}"
+    dest: "/usr/bin/{{ item }}"
+    state: link
+  loop:
+    - go
+    - gofmt
+
+- name: golang | Download TinyGo package
+  ansible.builtin.get_url:
+    url: https://github.com/tinygo-org/tinygo/releases/download/v0.37.0/tinygo_0.37.0_arm64.deb
+    dest: /tmp/tinygo_0.37.0_arm64.deb
+    mode: "0755"
+
+- name: golang | Install TinyGo package
+  become: true
+  ansible.builtin.apt:
+    deb: /tmp/tinygo_0.37.0_arm64.deb
+    state: present

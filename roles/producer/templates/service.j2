@@ -1,0 +1,14 @@
+{{ ansible_managed|comment }}
+
+[Unit]
+Description=Artbit heartbeat producer
+
+[Service]
+WorkingDirectory={{ producer_build_dir }}
+ExecStart={{ producer_build_dir }}/{{ producer_binary_name }} run --output uds --input mcp3008
+Restart=always
+User={{ ansible_user }}
+Group={{ ansible_user }}
+
+[Install]
+WantedBy=multi-user.target
