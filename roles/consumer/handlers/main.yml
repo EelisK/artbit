@@ -1,0 +1,8 @@
+---
+- name: consumer | Reload
+  become: true
+  ansible.builtin.systemd:
+    name: "{{ consumer_service_name }}"
+    state: restarted
+    daemon_reload: true
+    enabled: true

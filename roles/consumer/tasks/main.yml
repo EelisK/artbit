@@ -1,0 +1,23 @@
+---
+- name: consumer | Install poetry
+  community.general.pipx:
+    name: poetry
+    state: present
+
+- name: consumer | Install dependencies
+  ansible.builtin.shell:
+    cmd: |
+      ~/.local/bin/poetry install --no-interaction --no-ansi --all-extras
+    chdir: "{{ consumer_setup_dir }}"
+    executable: /bin/bash
+  register: poetry_install_output
+  changed_when: '"No dependencies to install" not in poetry_install_output.stdout'
+
+- name: consumer | Create systemd service
+  ansible.builtin.template:
+    src: service.j2
+    dest: /etc/systemd/system/{{ consumer_service_name }}
+    mode: "0644"
+  become: true
+  changed_when: true # Force handler to run
+  notify: consumer | Reload

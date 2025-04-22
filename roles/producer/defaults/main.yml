@@ -1,0 +1,6 @@
+---
+producer_entrypoint: ./cmd/artbit
+producer_binary_name: artbit-producer
+producer_service_name: artbit-producer.service
+producer_build_dir: /opt/artbit/producer
+producer_build_command: go build -o {{ producer_binary_name }} {{ producer_entrypoint }}

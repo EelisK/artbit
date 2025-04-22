@@ -1,0 +1,17 @@
+---
+- name: producer | Build
+  ansible.builtin.command: "{{ producer_build_command }}"
+  args:
+    chdir: "{{ producer_build_dir }}"
+  register: producer_build
+  changed_when: true
+  failed_when: producer_build.rc != 0
+  notify: producer | Reload
+
+- name: producer | Install
+  become: true
+  ansible.builtin.template:
+    src: service.j2
+    dest: /etc/systemd/system/{{ producer_service_name }}
+    mode: "0644"
+  notify: producer | Reload

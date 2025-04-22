@@ -1,6 +1,10 @@
 # Data from remote devices
 data/
 
+# Ansible
+*.retry
+.ansible
+
 # Exploratory data analysis
 notebooks/
 

@@ -1,0 +1,14 @@
+{{ ansible_managed|comment }}
+
+[Unit]
+Description=Artbit heartbeat player and consumer
+
+[Service]
+WorkingDirectory={{ consumer_setup_dir }}
+ExecStart=/home/{{ ansible_user }}/.local/bin/poetry run python -m app --uds
+Restart=always
+User={{ ansible_user }}
+Group={{ ansible_user }}
+
+[Install]
+WantedBy=multi-user.target
