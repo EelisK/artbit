@@ -55,7 +55,6 @@ func (p *PeriodDetector) Update(value float64) float64 {
 
 // Reset resets the period detector state.
 func (p *PeriodDetector) Reset() {
-	logger.Println("Resetting period detector state")
 	p.prevHighStart = time.Time{}
 	p.prevHighEnd = time.Time{}
 	p.prevHigh = time.Time{}
@@ -117,12 +116,6 @@ func (p *PeriodDetector) handleValue(value float64) float64 {
 
 	// Check if the range is within the amplitude limits
 	if minMaxRange := p.valueMinMax.GetRange(); !p.amplitudeLimit.IsInRange(minMaxRange) {
-		logger.Printf(
-			"Amplitude range %.3f is out of range: [%v, %v]\n",
-			minMaxRange,
-			p.amplitudeLimit.Min,
-			p.amplitudeLimit.Max,
-		)
 		p.Reset()
 		return value
 	}
