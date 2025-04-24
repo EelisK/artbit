@@ -242,14 +242,9 @@ class BrownNoise(ChannelAdapter):
 
         low_pass_filters: list[tuple[NDArray[np.float32], NDArray[np.float32]]] = []
         filter_order = 4
-        # frequency_bands_hz = [50, 100, 150, 200]
-        # frequency_bands_hz = [5, 10, 20, 40, 80, 160, 250]
-        # frequency_amplitudes = [0.25, 0.25, 0.25, 0.125, 0.0625, 0.03125, 0.03125]
 
         frequency_bands_hz = [5, 10, 20, 40, 80, 160, 250]
         frequency_amplitudes = [0.0625, 0.125, 0.25, 0.125, 0.0625, 0.03125, 0.03125]
-        # watchmedo shell-command --pattern="*.py" --recursive --command='python eelis.py' .
-        # frequency_amplitudes = [0.25, 0.5, 0.75, 0.5]
 
         for freq in frequency_bands_hz:
             b, a = signal.butter(  # pyright: ignore

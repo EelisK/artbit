@@ -1,9 +1,7 @@
-import argparse
 import logging
 import sys
-from typing import Union
 
-from app.plugins.base import Plugin
+from app import cli
 from app.sound import presets
 from app.sound.player import LoopPlayer
 
@@ -17,63 +15,22 @@ if __name__ != "__main__":
     raise RuntimeError("This module should be run as a script")
 
 
-args_parser = argparse.ArgumentParser(
-    description="Artbit - A simple heartbeat sound generator",
-)
-args_parser.add_argument(
-    "--verbose",
-    action="store_true",
-    help="Enable verbose logging",
-)
-stdin_group = args_parser.add_mutually_exclusive_group(required=False)
-stdin_group.add_argument(
-    "--stdin",
-    help="Use stdin as input",
-    action="store_true",
-)
-
-uds_group = args_parser.add_mutually_exclusive_group(required=False)
-uds_group.add_argument(
-    "--uds",
-    help="Use UDS as input",
-    action="store_true",
-)
-uds_group.add_argument(
-    "--uds-path",
-    help="Path to the UDS socket",
-    default="/tmp/artbit.sock",
-)
-uds_group.add_argument(
-    "--uds-timeout",
-    help="Timeout for UDS socket",
-    type=float,
-    default=0.1,
-)
-
-args = args_parser.parse_args()
-
-
-input_plugin: Union[Plugin, None] = None
-
-if args.stdin:
-    from app.plugins.stdin import StdInPlugin
-
-    input_plugin = StdInPlugin(prompt="Enter BPM: ")
-elif args.uds:
-    from app.plugins.uds import UDSPlugin
-
-    input_plugin = UDSPlugin(
-        path=args.uds_path,
-        timeout=args.uds_timeout,
-    )
+args = cli.parse_args()
+input_plugin = cli.get_plugin(args)
 
 if input_plugin is None:
     logging.error("No input plugin selected. Use --stdin or --uds.")
     sys.exit(1)
 
+
 player = LoopPlayer()
 player.start()
 
+bpm = cli.get_bpm(args)
+if bpm is not None:
+    if args.verbose:
+        logging.info(f"Initial BPM: {bpm}")
+    player.set_sound(presets.RealisticHeartbeatSound(bpm=bpm))
 
 try:
     input_plugin.start()
@@ -82,6 +39,7 @@ try:
         if args.verbose:
             logging.info(f"Received BPM: {bpm}")
         player.set_sound(presets.RealisticHeartbeatSound(bpm=bpm))
+        cli.set_bpm(args, round(bpm))
 except Exception:
     logging.exception("Stopping the application")
 finally:
