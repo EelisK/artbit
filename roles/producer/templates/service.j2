@@ -2,11 +2,14 @@
 
 [Unit]
 Description=Artbit heartbeat producer
+Requires=artbit-consumer.service
+After=artbit-consumer.service
 
 [Service]
 WorkingDirectory={{ producer_build_dir }}
-ExecStart={{ producer_build_dir }}/{{ producer_binary_name }} run --output uds --input mcp3008
+ExecStart={{ producer_build_dir }}/{{ producer_binary_name }} run --output uds --input mcp3008 --output-uds-socket {{ producer_socket }}
 Restart=always
+RestartSec=2s
 User={{ ansible_user }}
 Group={{ ansible_user }}
 

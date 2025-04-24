@@ -1,4 +1,5 @@
 ---
+producer_socket: /tmp/artbit.sock
 producer_entrypoint: ./cmd/artbit
 producer_binary_name: artbit-producer
 producer_service_name: artbit-producer.service
