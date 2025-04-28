@@ -5,7 +5,7 @@ Description=Artbit heartbeat player and consumer
 
 [Service]
 WorkingDirectory={{ consumer_setup_dir }}
-ExecStart=/home/{{ ansible_user }}/.local/bin/poetry run python -m app --uds
+ExecStart=/home/{{ ansible_user }}/.local/bin/poetry run python -m app --uds --verbose
 Restart=always
 RestartSec=2s
 User={{ ansible_user }}

@@ -1,5 +1,4 @@
 import argparse
-import logging
 
 from app.plugins.base import Plugin
 from app.plugins.stdin import StdInPlugin
@@ -44,8 +43,6 @@ def get_bpm(cfg: Args) -> int | None:
 def set_bpm(cfg: Args, bpm: int) -> None:
     with open(cfg.bpm_file, "w") as f:
         f.write(str(bpm))
-    if cfg.verbose:
-        logging.info(f"Saved BPM: {bpm} to {cfg.bpm_file}")
 
 
 def parse_args() -> Args:
@@ -60,13 +57,12 @@ def parse_args() -> Args:
     args_parser.add_argument(
         "--bpm-file",
         help="Path to the file where the last BPM is stored",
-        default="./last_bpm.txt",
+        default="last_bpm.txt",
     )
     args_parser.add_argument(
         "--bpm-default",
         help="Default BPM value",
         type=int,
-        default=70,
     )
 
     args_parser.add_argument(
