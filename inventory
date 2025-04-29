@@ -60,7 +60,8 @@ sudo arp-scan \
     "vars": {
       "ansible_connection": "ssh",
       "ansible_user": "pi",
-      "ansible_password": "raspberry"
+      "ansible_password": "raspberry",
+      "ansible_ssh_extra_args": "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
     }
   },
   "localhost": {
